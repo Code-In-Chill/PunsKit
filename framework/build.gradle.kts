@@ -1,5 +1,5 @@
 plugins {
-    id("com.github.johnrengelman.shadow") version "8.1.1"
+    id("com.gradleup.shadow") version "8.3.5"
     `maven-publish`
 }
 
@@ -17,24 +17,31 @@ dependencies {
 
     // SLF4J API
     compileOnly("org.slf4j:slf4j-api:2.0.12")
+    testImplementation("org.slf4j:slf4j-api:2.0.12")
 
     // Paper API — compileOnly vì server đã có sẵn lúc runtime
     compileOnly("io.papermc.paper:paper-api:1.20.6-R0.1-SNAPSHOT")
+
+    // Testing
+    testImplementation(platform("org.junit:junit-bom:5.10.2"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testImplementation("org.mockito:mockito-core:5.11.0")
 }
 
 tasks {
-    shadowJar {
-        archiveClassifier.set("") // bỏ suffix "-all" mặc định
-
-        // ── RELOCATION BẮT BUỘC ──────────────────────────────────────────────
-        // Mỗi plugin nhúng framework sẽ có bản riêng biệt trong namespace của nó.
-        // Điều này ngăn ClassLoader conflict khi nhiều plugin cùng dùng framework.
-        // Khi bạn publish framework, người dùng sẽ relocate sang namespace của họ.
-        // Ví dụ: "com.punshub.punskit" → "com.myplugin.shaded.punskit"
-        // ─────────────────────────────────────────────────────────────────────
+    test {
+        useJUnitPlatform()
     }
 
-    // Khi build, tự động chạy shadowJar thay vì jar thông thường
+    jar {
+        enabled = false
+    }
+
+    shadowJar {
+        archiveClassifier.set("") // bỏ suffix "-all" mặc định
+    }
+
+    // Khi build, tự động chạy shadowJar
     build {
         dependsOn(shadowJar)
     }

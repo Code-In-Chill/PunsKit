@@ -6,8 +6,12 @@ import com.punshub.punskit.logging.PunsLogger;
 import com.punshub.punskit.logging.Slf4jPunsLogger;
 import com.punshub.punskit.scanner.ClasspathScanner;
 import lombok.Getter;
+import org.bukkit.Bukkit;
+import org.bukkit.event.HandlerList;
+import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.Collection;
 import java.util.Set;
 
 /**
@@ -54,17 +58,51 @@ public class FrameworkLauncher {
             }
         }
 
-        lifecycleManager.invokePostConstructAll(registry.getAllBeans());
+        Collection<Object> singletonBeans = registry.getAllBeans();
+        lifecycleManager.invokePostConstructAll(singletonBeans);
+        
+        registerListeners(singletonBeans);
 
         long elapsed = System.currentTimeMillis() - startTime;
         logger.info("IoC Container started. {} bean(s) registered in {}ms.",
                 candidates.size(), elapsed);
     }
 
+    private void registerListeners(Collection<Object> beans) {
+        int count = 0;
+        for (Object bean : beans) {
+            if (bean instanceof Listener listener) {
+                Bukkit.getPluginManager().registerEvents(listener, plugin);
+                logger.debug("Auto-registered listener: {}", bean.getClass().getSimpleName());
+                count++;
+            }
+        }
+        if (count > 0) {
+            logger.info("✓ Auto-registered {} event listener(s).", count);
+        }
+    }
+
     public void shutdown() {
         logger.info("Shutting down IoC Container...");
-        lifecycleManager.invokePreDestroyAll(registry.getAllBeans());
+        
+        Collection<Object> singletonBeans = registry.getAllBeans();
+        unregisterListeners(singletonBeans);
+        
+        lifecycleManager.invokePreDestroyAll(singletonBeans);
         logger.info("IoC Container shut down cleanly.");
+    }
+
+    private void unregisterListeners(Collection<Object> beans) {
+        int count = 0;
+        for (Object bean : beans) {
+            if (bean instanceof Listener listener) {
+                HandlerList.unregisterAll(listener);
+                count++;
+            }
+        }
+        if (count > 0) {
+            logger.debug("Unregistered {} event listener(s).", count);
+        }
     }
 
     public <T> T getBean(Class<T> type) {

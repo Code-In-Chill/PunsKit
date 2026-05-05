@@ -1,8 +1,6 @@
 package com.punshub.punskit.container;
 
-import com.punshub.punskit.annotation.Autowired;
-import com.punshub.punskit.annotation.Primary;
-import com.punshub.punskit.annotation.Qualifier;
+import com.punshub.punskit.annotation.*;
 import com.punshub.punskit.exception.AmbiguousBeanException;
 import com.punshub.punskit.exception.BeanNotFoundException;
 import com.punshub.punskit.exception.CircularDependencyException;
@@ -38,13 +36,20 @@ public class BeanRegistry {
 
     @SuppressWarnings("unchecked")
     public <T> T resolve(Class<T> type) {
-        if (beans.containsKey(type)) {
+        if (isSingleton(type) && beans.containsKey(type)) {
             return (T) beans.get(type);
         }
         if (type.isInterface() || java.lang.reflect.Modifier.isAbstract(type.getModifiers())) {
             return resolveByInterface(type, null);
         }
         return createBean(type);
+    }
+
+    private boolean isSingleton(Class<?> type) {
+        if (!type.isAnnotationPresent(Scope.class)) {
+            return true;
+        }
+        return type.getAnnotation(Scope.class).value() == ScopeType.SINGLETON;
     }
 
     @SuppressWarnings("unchecked")
@@ -63,16 +68,21 @@ public class BeanRegistry {
         }
 
         currentlyResolving.add(type);
-        logger.debug("Creating bean: {}", type.getSimpleName());
+        logger.debug("Creating {} bean: {}", isSingleton(type) ? "singleton" : "prototype", type.getSimpleName());
 
         try {
             Constructor<?> constructor = findConstructor(type);
             Object[] args = resolveConstructorArgs(constructor);
 
             T instance = (T) constructor.newInstance(args);
-            beans.put(type, instance);
+            
+            if (isSingleton(type)) {
+                beans.put(type, instance);
+                logger.info("✓ Created singleton bean: {}", type.getSimpleName());
+            } else {
+                logger.debug("✓ Created prototype bean: {}", type.getSimpleName());
+            }
 
-            logger.info("✓ Created bean: {}", type.getSimpleName());
             return instance;
 
         } catch (Exception e) {
