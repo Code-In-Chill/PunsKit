@@ -26,8 +26,9 @@ jobs:
           fi
           
           if [[ "$BASE_REF" == "develop" ]]; then
-            if [[ ! "$HEAD_REF" =~ ^feature/ ]]; then
-              echo "Error: Only 'feature/*' branches can be merged into 'develop'."
+            if [[ ! "$HEAD_REF" =~ ^(feature|bugfix|hotfix|cicd|refactor|chore|docs)/ ]]; then
+              echo "Error: Branch '$HEAD_REF' is not allowed to merge into 'develop'."
+              echo "Allowed prefixes: feature/, bugfix/, hotfix/, cicd/, refactor/, chore/, docs/"
               exit 1
             fi
           fi
