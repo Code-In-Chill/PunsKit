@@ -1,0 +1,35 @@
+name: Branch Flow Enforcer
+
+on:
+  pull_request:
+    branches:
+      - master
+      - develop
+
+jobs:
+  enforce-flow:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Branch Flow
+        run: |
+          HEAD_REF="${{ github.head_ref }}"
+          BASE_REF="${{ github.base_ref }}"
+          
+          echo "Source Branch: $HEAD_REF"
+          echo "Target Branch: $BASE_REF"
+          
+          if [[ "$BASE_REF" == "master" ]]; then
+            if [[ "$HEAD_REF" != "develop" ]]; then
+              echo "Error: Only 'develop' can be merged into 'master'."
+              exit 1
+            fi
+          fi
+          
+          if [[ "$BASE_REF" == "develop" ]]; then
+            if [[ ! "$HEAD_REF" =~ ^feature/ ]]; then
+              echo "Error: Only 'feature/*' branches can be merged into 'develop'."
+              exit 1
+            fi
+          fi
+          
+          echo "Branch flow validation passed."
