@@ -1,5 +1,5 @@
 plugins {
-    id("com.github.johnrengelman.shadow") version "8.1.1"
+    id("com.gradleup.shadow") version "8.3.5"
 }
 
 group = "com.yourname.testplugin"
@@ -11,7 +11,7 @@ dependencies {
     annotationProcessor("org.projectlombok:lombok:1.18.32")
 
     // Nhúng framework vào plugin — dùng "implementation" để shadow đóng gói luôn
-    implementation(project(":framework"))
+    implementation(project(path = ":framework", configuration = "shadow"))
 
     // Paper API
     compileOnly("io.papermc.paper:paper-api:1.20.6-R0.1-SNAPSHOT")
