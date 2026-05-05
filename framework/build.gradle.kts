@@ -41,8 +41,7 @@ tasks {
 publishing {
     publications {
         create<MavenPublication>("gpr") {
-            from(components["java"])
-            artifact(tasks.shadowJar)
+            project.shadow.component(this)
         }
     }
     repositories {
