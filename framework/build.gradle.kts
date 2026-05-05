@@ -4,7 +4,9 @@ plugins {
 }
 
 group = "com.punshub.punskit"
-version = System.getenv("GITHUB_REF_NAME")?.replace("v", "") ?: "1.0.0-SNAPSHOT"
+version = project.findProperty("version")?.toString()?.replace("v", "") 
+    ?: System.getenv("GITHUB_REF_NAME")?.replace("v", "") 
+    ?: "1.0.0-SNAPSHOT"
 
 dependencies {
     // Lombok
