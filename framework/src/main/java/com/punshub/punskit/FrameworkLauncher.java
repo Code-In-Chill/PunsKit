@@ -1,5 +1,6 @@
 package com.punshub.punskit;
 
+import com.punshub.punskit.command.CommandManager;
 import com.punshub.punskit.container.BeanRegistry;
 import com.punshub.punskit.lifecycle.LifecycleManager;
 import com.punshub.punskit.logging.PunsLogger;
@@ -23,6 +24,7 @@ public class FrameworkLauncher {
     @Getter
     private final BeanRegistry registry;
     private final LifecycleManager lifecycleManager;
+    private final CommandManager commandManager;
     private final PunsLogger logger;
 
     private FrameworkLauncher(JavaPlugin plugin) {
@@ -30,6 +32,7 @@ public class FrameworkLauncher {
         this.logger = new Slf4jPunsLogger(plugin.getSLF4JLogger(), "PunsKit");
         this.registry = new BeanRegistry(logger.withContext("Registry"));
         this.lifecycleManager = new LifecycleManager(logger.withContext("Lifecycle"));
+        this.commandManager = new CommandManager(plugin, logger.withContext("Command"));
     }
 
     public static FrameworkLauncher start(JavaPlugin plugin, String basePackage) {
@@ -62,6 +65,7 @@ public class FrameworkLauncher {
         lifecycleManager.invokePostConstructAll(singletonBeans);
         
         registerListeners(singletonBeans);
+        commandManager.registerCommands(singletonBeans);
 
         long elapsed = System.currentTimeMillis() - startTime;
         logger.info("IoC Container started. {} bean(s) registered in {}ms.",
