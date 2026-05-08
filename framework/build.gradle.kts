@@ -22,6 +22,9 @@ dependencies {
     // Paper API — compileOnly vì server đã có sẵn lúc runtime
     compileOnly("io.papermc.paper:paper-api:1.20.6-R0.1-SNAPSHOT")
 
+    // ClassGraph for fast scanning
+    implementation("io.github.classgraph:classgraph:4.8.174")
+
     // Testing
     testImplementation(platform("org.junit:junit-bom:5.10.2"))
     testImplementation("org.junit.jupiter:junit-jupiter")
@@ -39,6 +42,10 @@ tasks {
 
     shadowJar {
         archiveClassifier.set("") // bỏ suffix "-all" mặc định
+        
+        // Relocate ClassGraph to avoid conflicts with other plugins
+        relocate("io.github.classgraph", "com.punshub.punskit.shaded.classgraph")
+        relocate("nonapi.io.github.classgraph", "com.punshub.punskit.shaded.nonapi.classgraph")
     }
 
     // Khi build, tự động chạy shadowJar
