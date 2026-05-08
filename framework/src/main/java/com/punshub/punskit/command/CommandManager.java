@@ -65,6 +65,12 @@ public class CommandManager {
         logger.debug("Registered advanced command: /{}", name);
     }
 
+    public void execute(Object bean, PCommand annotation, CommandSender sender, String input) {
+        String[] parts = input.split(" ");
+        String[] args = parts.length > 1 ? Arrays.copyOfRange(parts, 1, parts.length) : new String[0];
+        new PunsWrappedCommand(annotation.name(), bean, annotation, plugin, conditionRegistry, logger).execute(sender, annotation.name(), args);
+    }
+
     private static class PunsWrappedCommand extends BukkitCommand {
         private final Object bean;
         private final JavaPlugin plugin;
