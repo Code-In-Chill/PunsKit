@@ -8,6 +8,7 @@ import com.punshub.punskit.lifecycle.LifecycleManager;
 import com.punshub.punskit.logging.PunsLogger;
 import com.punshub.punskit.logging.Slf4jPunsLogger;
 import com.punshub.punskit.scanner.ClasspathScanner;
+import com.punshub.punskit.scheduler.SchedulerManager;
 import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.event.HandlerList;
@@ -28,6 +29,7 @@ public class FrameworkLauncher {
     private final LifecycleManager lifecycleManager;
     private final CommandManager commandManager;
     private final ConditionRegistry conditionRegistry;
+    private final SchedulerManager schedulerManager;
     private final PunsLogger logger;
 
     private FrameworkLauncher(JavaPlugin plugin) {
@@ -37,6 +39,7 @@ public class FrameworkLauncher {
         this.lifecycleManager = new LifecycleManager(logger.withContext("Lifecycle"));
         this.conditionRegistry = new ConditionRegistry(logger.withContext("Condition"));
         this.commandManager = new CommandManager(plugin, conditionRegistry, logger.withContext("Command"));
+        this.schedulerManager = new SchedulerManager(plugin, logger.withContext("Scheduler"));
 
         ConfigInjector configInjector = new ConfigInjector(plugin, logger.withContext("Config"));
         this.registry.setConfigInjector(configInjector);
@@ -74,6 +77,7 @@ public class FrameworkLauncher {
         conditionRegistry.registerProviders(singletonBeans);
         registerListeners(singletonBeans);
         commandManager.registerCommands(singletonBeans);
+        schedulerManager.registerSchedulers(singletonBeans);
 
         long elapsed = System.currentTimeMillis() - startTime;
         logger.info("IoC Container started. {} bean(s) registered in {}ms.",
@@ -99,6 +103,7 @@ public class FrameworkLauncher {
         
         Collection<Object> singletonBeans = registry.getAllBeans();
         unregisterListeners(singletonBeans);
+        schedulerManager.shutdown();
         
         lifecycleManager.invokePreDestroyAll(singletonBeans);
         logger.info("IoC Container shut down cleanly.");

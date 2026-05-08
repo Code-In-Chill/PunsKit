@@ -415,7 +415,7 @@ public @interface Value {
 
 ---
 
-### 2.5 Scheduler Annotation
+### 2.5 Scheduler Annotation (ĐÃ HOÀN THÀNH)
 
 ```java
 @Retention(RetentionPolicy.RUNTIME)
@@ -428,33 +428,10 @@ public @interface Scheduled {
 }
 ```
 
-```java
-private void registerSchedulers(Object bean) {
-    for (Method method : bean.getClass().getDeclaredMethods()) {
-        Scheduled scheduled = method.getAnnotation(Scheduled.class);
-        if (scheduled == null) continue;
-        
-        Runnable task = () -> {
-            try { method.invoke(bean); }
-            catch (Exception e) { logger.warning("Scheduler error in " + method.getName()); }
-        };
-        
-        BukkitScheduler scheduler = Bukkit.getScheduler();
-        if (scheduled.runOnce()) {
-            if (scheduled.async()) scheduler.runTaskLaterAsynchronously(plugin, task, scheduled.delay());
-            else scheduler.runTaskLater(plugin, task, scheduled.delay());
-        } else {
-            if (scheduled.async()) scheduler.runTaskTimerAsynchronously(plugin, task, scheduled.delay(), scheduled.period());
-            else scheduler.runTaskTimer(plugin, task, scheduled.delay(), scheduled.period());
-        }
-    }
-}
-```
-
 **Checklist:**
-- [ ] Method được gọi đúng interval
-- [ ] `async = true` không chạy trên main thread (verify bằng `Bukkit.isPrimaryThread()`)
-- [ ] Task được cancel khi plugin tắt (lưu BukkitTask reference, cancel trong shutdown)
+- [x] Method được gọi đúng interval
+- [x] `async = true` không chạy trên main thread
+- [x] Task được cancel khi plugin tắt
 
 ---
 
