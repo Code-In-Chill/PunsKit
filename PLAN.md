@@ -218,7 +218,7 @@ FUNCTION resolve(Class target):
 
 ---
 
-### 1.5 PunskitPlugin & JavaPlugin Integration (Tinh chỉnh)
+### 1.5 PunskitPlugin & JavaPlugin Integration (ĐÃ HOÀN THÀNH)
 
 Để tối ưu hóa trải nghiệm (DX), framework cung cấp class abstract `PunskitPlugin` kế thừa `JavaPlugin`. Người dùng chỉ cần kế thừa class này để tự động kích hoạt IoC Container mà không cần viết code khởi tạo thủ công.
 
@@ -389,10 +389,10 @@ private void registerCommand(Object bean, Command cmdAnnotation) {
 ```
 
 **Checklist:**
-- [ ] Lệnh hoạt động mà không cần khai báo trong `plugin.yml`
-- [ ] `@Subcommand` route đúng đến method tương ứng
-- [ ] Permission check được áp dụng tự động
-- [ ] Tab completion cơ bản hoạt động
+- [x] Lệnh hoạt động mà không cần khai báo trong `plugin.yml`
+- [x] `@Subcommand` route đúng đến method tương ứng
+- [x] Permission check được áp dụng tự động
+- [x] Tab completion cơ bản hoạt động (Hoàn thiện ở G3)
 
 ---
 
