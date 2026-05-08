@@ -125,4 +125,13 @@ public class FrameworkLauncher {
     public <T> T getBean(Class<T> type) {
         return registry.getBean(type);
     }
+
+    private boolean isPaper() {
+        try {
+            Class.forName("io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents");
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
+    }
 }
