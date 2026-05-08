@@ -1,30 +1,31 @@
 package com.yourname.testplugin.command;
 
-import com.punshub.punskit.annotation.Command;
-import com.punshub.punskit.annotation.CommandHandler;
-import com.punshub.punskit.annotation.Service;
-import com.punshub.punskit.annotation.Subcommand;
+import com.punshub.punskit.annotation.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 @Service
-@Command(name = "heal", description = "Heal yourself or others", permission = "punskit.command.heal", aliases = {"h"})
+@PCommand(name = "heal", description = "Heal yourself or others", permission = "punskit.command.heal", aliases = {"h"})
 public class HealCommand {
 
-    @CommandHandler
-    public void onHeal(CommandSender sender) {
-        if (!(sender instanceof Player player)) {
-            sender.sendMessage("§cOnly players can heal themselves.");
-            return;
-        }
+    @PCommandHandler
+    @PCooldown(10) // 10s cooldown
+    @PCondition(value = "is_op", message = "§cOnly OPs can heal themselves!")
+    public void onHeal(@PSender Player player) {
         healPlayer(player);
         player.sendMessage("§aYou have been healed!");
     }
 
-    @Subcommand("others")
-    public void onHealOthers(CommandSender sender, String[] args) {
-        sender.sendMessage("§eHeal others subcommand reached! Args: " + String.join(", ", args));
+    @PSubcommand("others")
+    @PAsync // Heal others logic could be heavy/async
+    public void onHealOthers(
+            @PSender CommandSender sender,
+            @PPlayer(name = "target") Player target,
+            @PInt(name = "amount", min = 1, max = 20, optional = true, defaultValue = 20) int amount
+    ) {
+        healPlayer(target);
+        sender.sendMessage("§eHealed " + target.getName() + " for " + amount + " HP (Simulated)!");
     }
 
     private void healPlayer(Player player) {

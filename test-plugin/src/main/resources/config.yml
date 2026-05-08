@@ -1,0 +1,5 @@
+server:
+  name: "PunsHub Test Server"
+  port: 25565
+database:
+  enabled: true
