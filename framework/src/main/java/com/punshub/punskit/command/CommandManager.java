@@ -1,28 +1,30 @@
 package com.punshub.punskit.command;
 
-import com.punshub.punskit.annotation.Command;
-import com.punshub.punskit.annotation.CommandHandler;
-import com.punshub.punskit.annotation.Subcommand;
+import com.punshub.punskit.annotation.*;
 import com.punshub.punskit.logging.PunsLogger;
 import lombok.RequiredArgsConstructor;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandMap;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.defaults.BukkitCommand;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Quản lý đăng ký và điều hướng lệnh (Command Routing).
+ * Quản lý đăng ký và điều hướng lệnh nâng cao.
  */
 @RequiredArgsConstructor
 public class CommandManager {
 
     private final JavaPlugin plugin;
+    private final ConditionRegistry conditionRegistry;
     private final PunsLogger logger;
     private CommandMap commandMap;
 
@@ -33,7 +35,7 @@ public class CommandManager {
 
         int count = 0;
         for (Object bean : beans) {
-            Command annotation = bean.getClass().getAnnotation(Command.class);
+            PCommand annotation = bean.getClass().getAnnotation(PCommand.class);
             if (annotation != null) {
                 registerCommand(bean, annotation);
                 count++;
@@ -41,7 +43,7 @@ public class CommandManager {
         }
 
         if (count > 0) {
-            logger.info("✓ Auto-registered {} command(s).", count);
+            logger.info("✓ Auto-registered {} advanced command(s).", count);
         }
     }
 
@@ -55,23 +57,30 @@ public class CommandManager {
         }
     }
 
-    private void registerCommand(Object bean, Command annotation) {
+    private void registerCommand(Object bean, PCommand annotation) {
         String name = annotation.name();
-        PunsWrappedCommand wrappedCommand = new PunsWrappedCommand(name, bean, annotation, logger);
+        PunsWrappedCommand wrappedCommand = new PunsWrappedCommand(name, bean, annotation, plugin, conditionRegistry, logger);
         
         commandMap.register(plugin.getName().toLowerCase(), wrappedCommand);
-        logger.debug("Registered dynamic command: /{}", name);
+        logger.debug("Registered advanced command: /{}", name);
     }
 
     private static class PunsWrappedCommand extends BukkitCommand {
         private final Object bean;
+        private final JavaPlugin plugin;
+        private final ConditionRegistry conditionRegistry;
         private final PunsLogger logger;
         private Method mainHandler;
         private final Map<String, Method> subcommands = new HashMap<>();
+        
+        // Cooldown storage: CommandKey -> UUID -> Timestamp
+        private static final Map<String, Map<UUID, Long>> cooldowns = new ConcurrentHashMap<>();
 
-        protected PunsWrappedCommand(String name, Object bean, Command annotation, PunsLogger logger) {
+        protected PunsWrappedCommand(String name, Object bean, PCommand annotation, JavaPlugin plugin, ConditionRegistry conditionRegistry, PunsLogger logger) {
             super(name);
             this.bean = bean;
+            this.plugin = plugin;
+            this.conditionRegistry = conditionRegistry;
             this.logger = logger.withContext("Command:" + name);
             
             setLabel(name);
@@ -84,11 +93,11 @@ public class CommandManager {
 
         private void parseHandlers() {
             for (Method method : bean.getClass().getDeclaredMethods()) {
-                if (method.isAnnotationPresent(CommandHandler.class)) {
+                if (method.isAnnotationPresent(PCommandHandler.class)) {
                     this.mainHandler = method;
                     this.mainHandler.setAccessible(true);
-                } else if (method.isAnnotationPresent(Subcommand.class)) {
-                    Subcommand sub = method.getAnnotation(Subcommand.class);
+                } else if (method.isAnnotationPresent(PSubcommand.class)) {
+                    PSubcommand sub = method.getAnnotation(PSubcommand.class);
                     method.setAccessible(true);
                     subcommands.put(sub.value().toLowerCase(), method);
                 }
@@ -103,41 +112,155 @@ public class CommandManager {
             }
 
             try {
-                if (args.length > 0) {
-                    Method subHandler = subcommands.get(args[0].toLowerCase());
-                    if (subHandler != null) {
-                        invokeHandler(subHandler, sender, args);
+                Method targetMethod;
+                String[] effectiveArgs;
+
+                if (args.length > 0 && subcommands.containsKey(args[0].toLowerCase())) {
+                    targetMethod = subcommands.get(args[0].toLowerCase());
+                    effectiveArgs = Arrays.copyOfRange(args, 1, args.length);
+                } else {
+                    targetMethod = mainHandler;
+                    effectiveArgs = args;
+                }
+
+                if (targetMethod == null) {
+                    sendUsage(sender);
+                    return true;
+                }
+
+                // Check Conditions
+                if (targetMethod.isAnnotationPresent(PCondition.class)) {
+                    PCondition cond = targetMethod.getAnnotation(PCondition.class);
+                    if (!conditionRegistry.check(cond.value(), sender)) {
+                        sender.sendMessage(cond.message());
                         return true;
                     }
                 }
 
-                if (mainHandler != null) {
-                    invokeHandler(mainHandler, sender, args);
-                } else {
-                    sender.sendMessage("§cUsage: /" + getName() + " [" + String.join("|", subcommands.keySet()) + "]");
+                // Check Cooldown
+                if (sender instanceof Player player && targetMethod.isAnnotationPresent(PCooldown.class)) {
+                    if (checkCooldown(player, targetMethod)) return true;
                 }
+
+                // Execute Async or Sync
+                if (targetMethod.isAnnotationPresent(PAsync.class)) {
+                    Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> invokeWithParsing(targetMethod, sender, effectiveArgs));
+                } else {
+                    invokeWithParsing(targetMethod, sender, effectiveArgs);
+                }
+
             } catch (Exception e) {
                 logger.error("Error executing command /" + getName(), e);
-                sender.sendMessage("§cAn internal error occurred while executing this command.");
+                sender.sendMessage("§cAn internal error occurred.");
             }
             return true;
         }
 
-        private void invokeHandler(Method method, CommandSender sender, String[] args) throws Exception {
-            Class<?>[] paramTypes = method.getParameterTypes();
-            Object[] params = new Object[paramTypes.length];
+        private boolean checkCooldown(Player player, Method method) {
+            PCooldown cooldownAnno = method.getAnnotation(PCooldown.class);
+            String key = getName() + ":" + method.getName();
+            Map<UUID, Long> methodCooldowns = cooldowns.computeIfAbsent(key, k -> new ConcurrentHashMap<>());
+            
+            long now = System.currentTimeMillis();
+            long lastUsed = methodCooldowns.getOrDefault(player.getUniqueId(), 0L);
+            long diff = (now - lastUsed) / 1000;
 
-            for (int i = 0; i < paramTypes.length; i++) {
-                if (CommandSender.class.isAssignableFrom(paramTypes[i])) {
-                    params[i] = sender;
-                } else if (paramTypes[i] == String[].class) {
-                    params[i] = args;
-                } else {
-                    params[i] = null; // Placeholder for future parameter injection (e.g., Player)
-                }
+            if (diff < cooldownAnno.value()) {
+                player.sendMessage("§cPlease wait " + (cooldownAnno.value() - diff) + "s before using this again.");
+                return true;
             }
+            
+            methodCooldowns.put(player.getUniqueId(), now);
+            return false;
+        }
 
-            method.invoke(bean, params);
+        private void invokeWithParsing(Method method, CommandSender sender, String[] args) {
+            try {
+                Parameter[] params = method.getParameters();
+                Object[] values = new Object[params.length];
+                int argIndex = 0;
+
+                for (int i = 0; i < params.length; i++) {
+                    Parameter p = params[i];
+                    
+                    if (p.isAnnotationPresent(PSender.class)) {
+                        values[i] = resolveSender(p.getType(), sender);
+                        if (values[i] == null) {
+                            sender.sendMessage("§cOnly " + p.getType().getSimpleName() + " can use this command.");
+                            return;
+                        }
+                    } else if (p.isAnnotationPresent(PInt.class)) {
+                        PInt anno = p.getAnnotation(PInt.class);
+                        String raw = getArg(args, argIndex++, anno.optional() ? String.valueOf(anno.defaultValue()) : null);
+                        if (raw == null) { sendMissingArg(sender, anno.name()); return; }
+                        
+                        try {
+                            int val = Integer.parseInt(raw);
+                            if (val < anno.min() || val > anno.max()) {
+                                sender.sendMessage("§c" + anno.name() + " must be between " + anno.min() + " and " + anno.max());
+                                return;
+                            }
+                            values[i] = val;
+                        } catch (NumberFormatException e) {
+                            sender.sendMessage("§c" + anno.name() + " must be a number.");
+                            return;
+                        }
+                    } else if (p.isAnnotationPresent(PText.class)) {
+                        PText anno = p.getAnnotation(PText.class);
+                        String val = getArg(args, argIndex++, anno.optional() ? anno.defaultValue() : null);
+                        if (val == null) { sendMissingArg(sender, anno.name()); return; }
+                        values[i] = val;
+                    } else if (p.isAnnotationPresent(PPlayer.class)) {
+                        PPlayer anno = p.getAnnotation(PPlayer.class);
+                        String raw = getArg(args, argIndex++, null);
+                        if (raw == null) {
+                            if (anno.optional()) values[i] = null;
+                            else { sendMissingArg(sender, anno.name()); return; }
+                        } else {
+                            Player target = Bukkit.getPlayer(raw);
+                            if (target == null) { sender.sendMessage("§cPlayer not found: " + raw); return; }
+                            values[i] = target;
+                        }
+                    } else {
+                        // Default fallback for legacy/unannotated parameters
+                        if (p.getType().isAssignableFrom(sender.getClass())) values[i] = sender;
+                        else if (p.getType() == String[].class) values[i] = args;
+                        else values[i] = null;
+                    }
+                }
+
+                method.invoke(bean, values);
+            } catch (Exception e) {
+                logger.error("Failed to invoke command handler", e);
+                sender.sendMessage("§cAn error occurred during command execution.");
+            }
+        }
+
+        private Object resolveSender(Class<?> type, CommandSender sender) {
+            if (type.isAssignableFrom(sender.getClass())) return sender;
+            return null;
+        }
+
+        private String getArg(String[] args, int index, String def) {
+            if (index < args.length) return args[index];
+            return def;
+        }
+
+        private void sendMissingArg(CommandSender sender, String name) {
+            sender.sendMessage("§cMissing required argument: <" + name + ">");
+        }
+
+        private void sendUsage(CommandSender sender) {
+            sender.sendMessage("§cUsage: /" + getName() + " [" + String.join("|", subcommands.keySet()) + "]");
+        }
+
+        @Override
+        public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, @NotNull String[] args) {
+            if (args.length == 1) {
+                List<String> completions = new ArrayList<>(subcommands.keySet());
+                return completions.stream().filter(s -> s.startsWith(args[0].toLowerCase())).toList();
+            }
+            return Collections.emptyList();
         }
     }
 }

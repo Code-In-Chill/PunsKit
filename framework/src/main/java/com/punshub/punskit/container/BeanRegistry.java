@@ -1,6 +1,7 @@
 package com.punshub.punskit.container;
 
 import com.punshub.punskit.annotation.*;
+import com.punshub.punskit.config.ConfigInjector;
 import com.punshub.punskit.exception.AmbiguousBeanException;
 import com.punshub.punskit.exception.BeanNotFoundException;
 import com.punshub.punskit.exception.CircularDependencyException;
@@ -24,6 +25,11 @@ public class BeanRegistry {
     private Set<Class<?>> allCandidates = new HashSet<>();
 
     private final PunsLogger logger;
+    private ConfigInjector configInjector;
+
+    public void setConfigInjector(ConfigInjector injector) {
+        this.configInjector = injector;
+    }
 
     public void registerCandidates(Set<Class<?>> candidates) {
         this.allCandidates = candidates;
@@ -76,6 +82,11 @@ public class BeanRegistry {
 
             T instance = (T) constructor.newInstance(args);
             
+            // Perform post-instantiation injection
+            if (configInjector != null) {
+                configInjector.inject(instance);
+            }
+
             if (isSingleton(type)) {
                 beans.put(type, instance);
                 logger.info("✓ Created singleton bean: {}", type.getSimpleName());

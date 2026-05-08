@@ -1,6 +1,7 @@
 package com.yourname.testplugin;
 
 import com.punshub.punskit.PunskitPlugin;
+import com.yourname.testplugin.service.ConfigTestService;
 import com.yourname.testplugin.service.PrototypeService;
 import org.slf4j.Logger;
 
@@ -14,8 +15,17 @@ public class TestPlugin extends PunskitPlugin {
     @Override
     public void onPluginEnable() {
         this.log = getSLF4JLogger();
+        saveDefaultConfig();
         
         log.info("TestPlugin (PunskitPlugin) starting verification...");
+
+        // Verification for Config Injection
+        ConfigTestService configService = getBean(ConfigTestService.class);
+        log.info("✓ Config Injection verified:");
+        log.info("  - server.name: {}", configService.getServerName());
+        log.info("  - server.port: {}", configService.getServerPort());
+        log.info("  - database.enabled: {}", configService.isDatabaseEnabled());
+        log.info("  - non.existent (default): {}", configService.getNonExistent());
 
         // Verification for Prototype Scope
         // Sử dụng getBean() trực tiếp từ PunskitPlugin

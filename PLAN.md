@@ -396,7 +396,7 @@ private void registerCommand(Object bean, Command cmdAnnotation) {
 
 ---
 
-### 2.4 Config Injection (@Value)
+### 2.4 Config Injection (@Value) (ĐÃ HOÀN THÀNH)
 
 ```java
 @Retention(RetentionPolicy.RUNTIME)
@@ -407,34 +407,11 @@ public @interface Value {
 }
 ```
 
-**Cơ chế injection sau khi Bean được tạo:**
-```java
-private void injectConfigValues(Object bean) {
-    FileConfiguration config = plugin.getConfig();
-    
-    for (Field field : bean.getClass().getDeclaredFields()) {
-        Value valueAnnotation = field.getAnnotation(Value.class);
-        if (valueAnnotation == null) continue;
-        
-        String path = parseConfigPath(valueAnnotation.value()); // bỏ ${}
-        field.setAccessible(true);
-        
-        Object value = config.get(path);
-        if (value == null) value = parseDefault(valueAnnotation.defaultValue(), field.getType());
-        if (value == null) throw new ConfigValueNotFoundException(path, bean.getClass());
-        
-        field.set(bean, convertType(value, field.getType()));
-    }
-}
-```
-
-**Type converter cần hỗ trợ:** `String`, `int/Integer`, `double/Double`, `boolean/Boolean`, `List<String>`
-
 **Checklist:**
-- [ ] `@Value("${server.name}")` inject đúng giá trị String
-- [ ] Type conversion hoạt động cho các kiểu cơ bản
-- [ ] `defaultValue` được dùng khi key không tồn tại trong config
-- [ ] Ném lỗi rõ ràng khi key bắt buộc không tồn tại
+- [x] `@Value("${server.name}")` inject đúng giá trị String
+- [x] Type conversion hoạt động cho các kiểu cơ bản
+- [x] `defaultValue` được dùng khi key không tồn tại trong config
+- [x] Ném lỗi rõ ràng khi key bắt buộc không tồn tại
 
 ---
 
