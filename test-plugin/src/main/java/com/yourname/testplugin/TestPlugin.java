@@ -1,28 +1,26 @@
 package com.yourname.testplugin;
 
-import com.punshub.punskit.FrameworkLauncher;
+import com.punshub.punskit.PunskitPlugin;
 import com.yourname.testplugin.service.PrototypeService;
-import org.bukkit.plugin.java.JavaPlugin;
 import org.slf4j.Logger;
 
 /**
- * Plugin mẫu để test framework.
+ * Plugin mẫu để test framework sử dụng PunskitPlugin base class.
  */
-public class TestPlugin extends JavaPlugin {
+public class TestPlugin extends PunskitPlugin {
 
-    private FrameworkLauncher framework;
     private Logger log;
 
     @Override
-    public void onEnable() {
+    public void onPluginEnable() {
         this.log = getSLF4JLogger();
         
-        // ── Một dòng duy nhất để khởi động toàn bộ IoC Container ─────────────
-        framework = FrameworkLauncher.start(this, "com.yourname.testplugin");
+        log.info("TestPlugin (PunskitPlugin) starting verification...");
 
         // Verification for Prototype Scope
-        PrototypeService p1 = framework.getBean(PrototypeService.class);
-        PrototypeService p2 = framework.getBean(PrototypeService.class);
+        // Sử dụng getBean() trực tiếp từ PunskitPlugin
+        PrototypeService p1 = getBean(PrototypeService.class);
+        PrototypeService p2 = getBean(PrototypeService.class);
         
         if (p1 != p2) {
             log.info("✓ Prototype Scope verified: p1 and p2 are different instances.");
@@ -30,14 +28,13 @@ public class TestPlugin extends JavaPlugin {
             log.error("✗ Prototype Scope failed: p1 and p2 are the same instance.");
         }
 
-        log.info("TestPlugin enabled!");
+        log.info("TestPlugin enabled successfully!");
     }
 
     @Override
-    public void onDisable() {
-        if (framework != null) {
-            framework.shutdown();
+    public void onPluginDisable() {
+        if (log != null) {
+            log.info("TestPlugin disabling...");
         }
-        log.info("TestPlugin disabled!");
     }
 }
