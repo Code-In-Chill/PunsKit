@@ -1,11 +1,14 @@
 package com.punshub.punskit.command;
 
 import com.punshub.punskit.annotation.PConditionProvider;
+import com.punshub.punskit.exception.FrameworkException;
 import com.punshub.punskit.logging.PunsLogger;
 import lombok.RequiredArgsConstructor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -37,12 +40,38 @@ public class ConditionRegistry {
     }
 
     private void registerProvider(Object bean, Method method, String key) {
+        if (method.getReturnType() != boolean.class && method.getReturnType() != Boolean.class) {
+            throw new FrameworkException("Condition provider method '" + method.getName() + "' in " + 
+                    bean.getClass().getSimpleName() + " must return boolean.");
+        }
+
+        Parameter[] params = method.getParameters();
+        if (params.length > 1) {
+            throw new FrameworkException("Condition provider method '" + method.getName() + "' in " + 
+                    bean.getClass().getSimpleName() + " must have 0 or 1 parameter.");
+        }
+
+        Class<?> paramType = params.length == 1 ? params[0].getType() : null;
+        if (paramType != null && !CommandSender.class.isAssignableFrom(paramType) && !Player.class.isAssignableFrom(paramType)) {
+            throw new FrameworkException("Condition provider parameter in '" + method.getName() + "' must be CommandSender or Player.");
+        }
+
         method.setAccessible(true);
         conditions.put(key, (sender) -> {
             try {
+                if (paramType == null) {
+                    Object result = method.invoke(bean);
+                    return result instanceof Boolean b && b;
+                }
+
+                if (Player.class.isAssignableFrom(paramType)) {
+                    if (!(sender instanceof Player player)) return false;
+                    Object result = method.invoke(bean, player);
+                    return result instanceof Boolean b && b;
+                }
+
                 Object result = method.invoke(bean, sender);
-                if (result instanceof Boolean b) return b;
-                return true;
+                return result instanceof Boolean b && b;
             } catch (Exception e) {
                 logger.error("Error evaluating condition: " + key, e);
                 return false;

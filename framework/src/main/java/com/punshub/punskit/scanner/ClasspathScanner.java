@@ -2,6 +2,7 @@ package com.punshub.punskit.scanner;
 
 import com.punshub.punskit.annotation.Component;
 import com.punshub.punskit.annotation.Service;
+import com.punshub.punskit.exception.FrameworkException;
 import com.punshub.punskit.logging.PunsLogger;
 import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ScanResult;
@@ -59,6 +60,8 @@ public class ClasspathScanner {
             long elapsed = System.currentTimeMillis() - startTime;
             logger.info("Scan complete. Found {} candidate(s) in {}ms.", candidates.size(), elapsed);
             return candidates;
+        } catch (Exception e) {
+            throw new FrameworkException("Failed to scan classpath in package '" + basePackage + "' for plugin " + plugin.getName(), e);
         }
     }
 }

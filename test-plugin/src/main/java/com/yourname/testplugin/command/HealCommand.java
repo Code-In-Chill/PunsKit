@@ -28,7 +28,8 @@ public class HealCommand {
     }
 
     private void healPlayer(Player player) {
-        double maxHealth = player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
+        var attribute = player.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+        double maxHealth = attribute != null ? attribute.getValue() : 20.0;
         player.setHealth(maxHealth);
         player.setFoodLevel(20);
     }

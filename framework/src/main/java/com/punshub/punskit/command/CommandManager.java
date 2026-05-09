@@ -28,6 +28,9 @@ public class CommandManager {
     private final PunsLogger logger;
     private CommandMap commandMap;
 
+    // Track registered commands for cleanup
+    private final List<String> registeredCommands = new ArrayList<>();
+
     // Cooldown storage: CommandKey -> UUID -> Timestamp
     private final Map<String, Map<UUID, Long>> cooldowns = new ConcurrentHashMap<>();
 
@@ -58,6 +61,10 @@ public class CommandManager {
     public void cleanup() {
         cooldowns.clear();
         logger.debug("Cleared command cooldowns.");
+
+        if (commandMap != null) {
+            unregisterCommands();
+        }
     }
 
     private void initializeCommandMap() {
@@ -66,7 +73,7 @@ public class CommandManager {
             field.setAccessible(true);
             this.commandMap = (CommandMap) field.get(Bukkit.getServer());
         } catch (Exception e) {
-            logger.error("Failed to access Bukkit CommandMap. Advanced commands will not work.", e);
+            throw new com.punshub.punskit.exception.FrameworkException("Failed to access Bukkit CommandMap. Advanced commands will not work.", e);
         }
     }
 
@@ -75,11 +82,48 @@ public class CommandManager {
         PunsWrappedCommand wrappedCommand = new PunsWrappedCommand(name, bean, annotation, plugin, conditionRegistry, logger, cooldowns);
         
         commandMap.register(plugin.getName().toLowerCase(), wrappedCommand);
+        registeredCommands.add(name.toLowerCase());
+        for (String alias : annotation.aliases()) {
+            registeredCommands.add(alias.toLowerCase());
+        }
         logger.debug("Registered advanced command: /{}", name);
     }
 
+    private void unregisterCommands() {
+        try {
+            Field knownCommandsField = org.bukkit.command.SimpleCommandMap.class.getDeclaredField("knownCommands");
+            knownCommandsField.setAccessible(true);
+            @SuppressWarnings("unchecked")
+            Map<String, org.bukkit.command.Command> knownCommands = (Map<String, org.bukkit.command.Command>) knownCommandsField.get(commandMap);
+
+            int count = 0;
+            for (String label : registeredCommands) {
+                String pluginPrefix = plugin.getName().toLowerCase() + ":" + label;
+                if (knownCommands.containsKey(label)) {
+                    org.bukkit.command.Command cmd = knownCommands.get(label);
+                    if (cmd instanceof PunsWrappedCommand) {
+                        cmd.unregister(commandMap);
+                        knownCommands.remove(label);
+                        knownCommands.remove(pluginPrefix);
+                        count++;
+                    }
+                }
+            }
+            registeredCommands.clear();
+            if (count > 0) {
+                logger.debug("Unregistered {} advanced command(s).", count);
+            }
+        } catch (Exception e) {
+            logger.error("Failed to unregister commands during cleanup", e);
+        }
+    }
+
     public void execute(Object bean, PCommand annotation, CommandSender sender, String input) {
-        String[] parts = input.split(" ");
+        String trimmed = input.trim();
+        if (trimmed.startsWith("/")) {
+            trimmed = trimmed.substring(1);
+        }
+        String[] parts = trimmed.split("\\s+");
         String[] args = parts.length > 1 ? Arrays.copyOfRange(parts, 1, parts.length) : new String[0];
         new PunsWrappedCommand(annotation.name(), bean, annotation, plugin, conditionRegistry, logger, cooldowns).execute(sender, annotation.name(), args);
     }

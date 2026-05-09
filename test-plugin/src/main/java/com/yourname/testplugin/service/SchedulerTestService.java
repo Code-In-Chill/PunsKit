@@ -2,7 +2,6 @@ package com.yourname.testplugin.service;
 
 import com.punshub.punskit.annotation.Scheduled;
 import com.punshub.punskit.annotation.Service;
-import org.bukkit.Bukkit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

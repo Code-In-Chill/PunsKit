@@ -2,6 +2,7 @@ package com.punshub.punskit.config;
 
 import com.punshub.punskit.annotation.OnConfigReload;
 import com.punshub.punskit.annotation.Value;
+import com.punshub.punskit.exception.FrameworkException;
 import com.punshub.punskit.logging.PunsLogger;
 import lombok.RequiredArgsConstructor;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -47,7 +48,7 @@ public class ConfigInjector {
                 if (!annotation.defaultValue().isEmpty()) {
                     value = convert(path, annotation.defaultValue(), field.getType());
                 } else {
-                    throw new RuntimeException("Required config path not found: " + path + 
+                    throw new FrameworkException("Required config path not found: " + path + 
                             " for field " + field.getName() + " in " + clazz.getSimpleName());
                 }
             } else {
@@ -60,7 +61,7 @@ public class ConfigInjector {
                 logger.debug("Injected @Value({}) into field {} of {}", 
                         path, field.getName(), clazz.getSimpleName());
             } catch (Exception e) {
-                throw new RuntimeException("Failed to inject @Value into field: " + field.getName(), e);
+                throw new FrameworkException("Failed to inject @Value into field: " + field.getName(), e);
             }
         }
     }
@@ -95,7 +96,7 @@ public class ConfigInjector {
             if (type == boolean.class || type == Boolean.class) return Boolean.parseBoolean(str);
             if (type == long.class || type == Long.class) return Long.parseLong(str);
         } catch (NumberFormatException e) {
-            throw new RuntimeException("Failed to convert config value at '" + path + "' (value: " + str + ") to " + type.getSimpleName());
+            throw new FrameworkException("Failed to convert config value at '" + path + "' (value: " + str + ") to " + type.getSimpleName());
         }
         
         if (type == String.class) return str;
