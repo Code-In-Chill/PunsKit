@@ -28,9 +28,17 @@ public class CommandManager {
     private final PunsLogger logger;
     private CommandMap commandMap;
 
+    // Cooldown storage: CommandKey -> UUID -> Timestamp
+    private final Map<String, Map<UUID, Long>> cooldowns = new ConcurrentHashMap<>();
+
     public void registerCommands(Collection<Object> beans) {
         if (commandMap == null) {
             initializeCommandMap();
+        }
+
+        if (commandMap == null) {
+            logger.error("Skipping command registration: CommandMap could not be initialized.");
+            return;
         }
 
         int count = 0;
@@ -47,19 +55,24 @@ public class CommandManager {
         }
     }
 
+    public void cleanup() {
+        cooldowns.clear();
+        logger.debug("Cleared command cooldowns.");
+    }
+
     private void initializeCommandMap() {
         try {
             Field field = Bukkit.getServer().getClass().getDeclaredField("commandMap");
             field.setAccessible(true);
             this.commandMap = (CommandMap) field.get(Bukkit.getServer());
         } catch (Exception e) {
-            logger.error("Failed to access Bukkit CommandMap", e);
+            logger.error("Failed to access Bukkit CommandMap. Advanced commands will not work.", e);
         }
     }
 
     private void registerCommand(Object bean, PCommand annotation) {
         String name = annotation.name();
-        PunsWrappedCommand wrappedCommand = new PunsWrappedCommand(name, bean, annotation, plugin, conditionRegistry, logger);
+        PunsWrappedCommand wrappedCommand = new PunsWrappedCommand(name, bean, annotation, plugin, conditionRegistry, logger, cooldowns);
         
         commandMap.register(plugin.getName().toLowerCase(), wrappedCommand);
         logger.debug("Registered advanced command: /{}", name);
@@ -68,7 +81,7 @@ public class CommandManager {
     public void execute(Object bean, PCommand annotation, CommandSender sender, String input) {
         String[] parts = input.split(" ");
         String[] args = parts.length > 1 ? Arrays.copyOfRange(parts, 1, parts.length) : new String[0];
-        new PunsWrappedCommand(annotation.name(), bean, annotation, plugin, conditionRegistry, logger).execute(sender, annotation.name(), args);
+        new PunsWrappedCommand(annotation.name(), bean, annotation, plugin, conditionRegistry, logger, cooldowns).execute(sender, annotation.name(), args);
     }
 
     private static class PunsWrappedCommand extends BukkitCommand {
@@ -76,18 +89,17 @@ public class CommandManager {
         private final JavaPlugin plugin;
         private final ConditionRegistry conditionRegistry;
         private final PunsLogger logger;
+        private final Map<String, Map<UUID, Long>> cooldowns;
         private Method mainHandler;
         private final Map<String, Method> subcommands = new HashMap<>();
         
-        // Cooldown storage: CommandKey -> UUID -> Timestamp
-        private static final Map<String, Map<UUID, Long>> cooldowns = new ConcurrentHashMap<>();
-
-        protected PunsWrappedCommand(String name, Object bean, PCommand annotation, JavaPlugin plugin, ConditionRegistry conditionRegistry, PunsLogger logger) {
+        protected PunsWrappedCommand(String name, Object bean, PCommand annotation, JavaPlugin plugin, ConditionRegistry conditionRegistry, PunsLogger logger, Map<String, Map<UUID, Long>> cooldowns) {
             super(name);
             this.bean = bean;
             this.plugin = plugin;
             this.conditionRegistry = conditionRegistry;
             this.logger = logger.withContext("Command:" + name);
+            this.cooldowns = cooldowns;
             
             setLabel(name);
             setDescription(annotation.description());
@@ -197,8 +209,9 @@ public class CommandManager {
                         }
                     } else if (p.isAnnotationPresent(PInt.class)) {
                         PInt anno = p.getAnnotation(PInt.class);
-                        String raw = getArg(args, argIndex++, anno.optional() ? String.valueOf(anno.defaultValue()) : null);
+                        String raw = getArg(args, argIndex, anno.optional() ? String.valueOf(anno.defaultValue()) : null);
                         if (raw == null) { sendMissingArg(sender, anno.name()); return; }
+                        if (argIndex < args.length) argIndex++;
                         
                         try {
                             int val = Integer.parseInt(raw);
@@ -213,16 +226,18 @@ public class CommandManager {
                         }
                     } else if (p.isAnnotationPresent(PText.class)) {
                         PText anno = p.getAnnotation(PText.class);
-                        String val = getArg(args, argIndex++, anno.optional() ? anno.defaultValue() : null);
+                        String val = getArg(args, argIndex, anno.optional() ? anno.defaultValue() : null);
                         if (val == null) { sendMissingArg(sender, anno.name()); return; }
+                        if (argIndex < args.length) argIndex++;
                         values[i] = val;
                     } else if (p.isAnnotationPresent(PPlayer.class)) {
                         PPlayer anno = p.getAnnotation(PPlayer.class);
-                        String raw = getArg(args, argIndex++, null);
+                        String raw = getArg(args, argIndex, null);
                         if (raw == null) {
                             if (anno.optional()) values[i] = null;
                             else { sendMissingArg(sender, anno.name()); return; }
                         } else {
+                            if (argIndex < args.length) argIndex++;
                             Player target = Bukkit.getPlayer(raw);
                             if (target == null) { sender.sendMessage("§cPlayer not found: " + raw); return; }
                             values[i] = target;

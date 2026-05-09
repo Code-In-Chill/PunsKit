@@ -22,10 +22,9 @@ public class ConfigInjector {
     private final PunsLogger logger;
 
     /**
-     * Reloads configuration and re-injects all beans.
+     * Re-injects all beans with the latest configuration values.
      */
-    public void reloadAll(Collection<Object> beans) {
-        plugin.reloadConfig();
+    public void reinjectAll(Collection<Object> beans) {
         for (Object bean : beans) {
             inject(bean);
             invokeReloadHook(bean);
@@ -46,14 +45,13 @@ public class ConfigInjector {
 
             if (value == null) {
                 if (!annotation.defaultValue().isEmpty()) {
-                    value = convert(annotation.defaultValue(), field.getType());
+                    value = convert(path, annotation.defaultValue(), field.getType());
                 } else {
-                    logger.warn("Config path not found: {} for field {} in {}", 
-                            path, field.getName(), clazz.getSimpleName());
-                    continue;
+                    throw new RuntimeException("Required config path not found: " + path + 
+                            " for field " + field.getName() + " in " + clazz.getSimpleName());
                 }
             } else {
-                value = convert(value, field.getType());
+                value = convert(path, value, field.getType());
             }
 
             try {
@@ -62,7 +60,7 @@ public class ConfigInjector {
                 logger.debug("Injected @Value({}) into field {} of {}", 
                         path, field.getName(), clazz.getSimpleName());
             } catch (Exception e) {
-                logger.error("Failed to inject @Value into field: " + field.getName(), e);
+                throw new RuntimeException("Failed to inject @Value into field: " + field.getName(), e);
             }
         }
     }
@@ -87,14 +85,19 @@ public class ConfigInjector {
         return value;
     }
 
-    private Object convert(Object value, Class<?> type) {
+    private Object convert(String path, Object value, Class<?> type) {
         if (type.isInstance(value)) return value;
 
         String str = String.valueOf(value);
-        if (type == int.class || type == Integer.class) return Integer.parseInt(str);
-        if (type == double.class || type == Double.class) return Double.parseDouble(str);
-        if (type == boolean.class || type == Boolean.class) return Boolean.parseBoolean(str);
-        if (type == long.class || type == Long.class) return Long.parseLong(str);
+        try {
+            if (type == int.class || type == Integer.class) return Integer.parseInt(str);
+            if (type == double.class || type == Double.class) return Double.parseDouble(str);
+            if (type == boolean.class || type == Boolean.class) return Boolean.parseBoolean(str);
+            if (type == long.class || type == Long.class) return Long.parseLong(str);
+        } catch (NumberFormatException e) {
+            throw new RuntimeException("Failed to convert config value at '" + path + "' (value: " + str + ") to " + type.getSimpleName());
+        }
+        
         if (type == String.class) return str;
         
         // Hỗ trợ List<String> cơ bản nếu Bukkit trả về List

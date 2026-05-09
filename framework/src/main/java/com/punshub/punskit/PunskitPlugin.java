@@ -52,10 +52,9 @@ public abstract class PunskitPlugin extends JavaPlugin {
      */
     @Override
     public void reloadConfig() {
+        super.reloadConfig();
         if (launcher != null) {
             launcher.reloadConfig();
-        } else {
-            super.reloadConfig();
         }
     }
 

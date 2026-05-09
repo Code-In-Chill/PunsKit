@@ -422,7 +422,7 @@ public @interface Value {
 @Target(ElementType.METHOD)
 public @interface Scheduled {
     long delay() default 0;      // ticks trước khi chạy lần đầu
-    long period() default 20;    // ticks giữa mỗi lần chạy (20 = 1 giây)
+    long period() default -1;    // ticks giữa mỗi lần chạy (nếu <= 0 thì chạy 1 lần)
     boolean async() default false;
     boolean runOnce() default false;  // chạy 1 lần thì dừng
 }

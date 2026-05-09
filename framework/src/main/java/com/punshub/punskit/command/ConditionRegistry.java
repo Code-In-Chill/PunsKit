@@ -54,8 +54,8 @@ public class ConditionRegistry {
     public boolean check(String key, CommandSender sender) {
         Predicate<CommandSender> condition = conditions.get(key);
         if (condition == null) {
-            logger.warn("Condition not found: {}", key);
-            return true; // Default to allow if not found? Or false? Let's say true but log error.
+            logger.warn("Condition not found: {}. Failing closed for security.", key);
+            return false;
         }
         return condition.test(sender);
     }

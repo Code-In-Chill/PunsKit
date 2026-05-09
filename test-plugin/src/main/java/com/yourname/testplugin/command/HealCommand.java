@@ -18,7 +18,6 @@ public class HealCommand {
     }
 
     @PSubcommand("others")
-    @PAsync // Heal others logic could be heavy/async
     public void onHealOthers(
             @PSender CommandSender sender,
             @PPlayer(name = "target") Player target,

@@ -39,6 +39,12 @@ public class SchedulerManager {
     }
 
     private void scheduleTask(Object bean, Method method, Scheduled annotation) {
+        if (method.getParameterCount() > 0) {
+            logger.error("Method {} in {} has @Scheduled but has parameters. Scheduled methods must have zero parameters. Skipping.",
+                    method.getName(), bean.getClass().getSimpleName());
+            return;
+        }
+
         method.setAccessible(true);
         Runnable task = () -> {
             try {

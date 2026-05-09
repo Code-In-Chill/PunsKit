@@ -104,6 +104,7 @@ public class FrameworkLauncher {
         Collection<Object> singletonBeans = registry.getAllBeans();
         unregisterListeners(singletonBeans);
         schedulerManager.shutdown();
+        commandManager.cleanup();
         
         lifecycleManager.invokePreDestroyAll(singletonBeans);
         logger.info("IoC Container shut down cleanly.");
@@ -129,16 +130,9 @@ public class FrameworkLauncher {
     public void reloadConfig() {
         ConfigInjector injector = registry.getConfigInjector();
         if (injector != null) {
-            injector.reloadAll(registry.getAllBeans());
+            injector.reinjectAll(registry.getAllBeans());
         }
     }
 
-    private boolean isPaper() {
-        try {
-            Class.forName("io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents");
-            return true;
-        } catch (ClassNotFoundException e) {
-            return false;
-        }
-    }
+
 }
