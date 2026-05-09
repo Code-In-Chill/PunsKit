@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * Quản lý vòng đời của Bean: gọi {@code @PPostConstruct} khi khởi tạo
@@ -27,7 +28,7 @@ public class LifecycleManager {
         }
     }
 
-    public void invokePostConstructOnReload(Collection<Object> beans) {
+    public void invokePostConstructOnReload(Collection<Object> beans, Consumer<Object> registrar) {
         for (Object bean : beans) {
             List<Method> methods = findAnnotatedMethods(bean.getClass(), PPostConstruct.class);
             for (Method method : methods) {
@@ -39,7 +40,11 @@ public class LifecycleManager {
                         logger.debug("Unregistered listener for {} before @PPostConstruct reinvocation.", 
                                 bean.getClass().getSimpleName());
                     }
+                    
                     invoke(bean, method, "@PPostConstruct (Reload)");
+                    
+                    // Re-register via the provided registrar
+                    registrar.accept(bean);
                 }
             }
         }

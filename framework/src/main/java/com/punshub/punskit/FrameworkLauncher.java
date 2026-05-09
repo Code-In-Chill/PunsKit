@@ -20,6 +20,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Set;
 
 /**
@@ -133,7 +134,7 @@ public class FrameworkLauncher {
                 singletonBeans.size(), elapsed);
     }
 
-    private void registerListeners(Collection<Object> beans) {
+    public void registerListeners(Collection<Object> beans) {
         int count = 0;
         for (Object bean : beans) {
             if (bean instanceof Listener listener) {
@@ -183,7 +184,13 @@ public class FrameworkLauncher {
         if (injector != null) {
             Collection<Object> beans = registry.getAllBeans();
             injector.reinjectAll(beans);
-            lifecycleManager.invokePostConstructOnReload(beans);
+            
+            // Pass the registrar callback to handle re-registration safely
+            lifecycleManager.invokePostConstructOnReload(beans, (reloadedBean) -> {
+                if (reloadedBean instanceof Listener) {
+                    registerListeners(Collections.singletonList(reloadedBean));
+                }
+            });
         }
     }
 

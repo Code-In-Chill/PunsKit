@@ -24,16 +24,16 @@ public abstract class PunskitPlugin extends JavaPlugin {
 
     @Override
     public final void onLoad() {
-        // 1. Auto-detect package if not manually set
+        // 1. Trigger user-defined load logic (Allows setting basePackage, etc.)
+        onPluginLoad();
+
+        // 2. Auto-detect package if not manually set
         if (this.basePackage == null) {
             this.basePackage = this.getClass().getPackage().getName();
         }
 
-        // 2. Bootstrap the framework (required for Brigadier command registration)
+        // 3. Bootstrap the framework (required for Brigadier command registration)
         this.launcher = FrameworkLauncher.bootstrap(this, this.basePackage);
-
-        // 3. Trigger user-defined load logic
-        onPluginLoad();
     }
 
     @Override

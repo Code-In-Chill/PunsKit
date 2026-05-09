@@ -212,9 +212,9 @@ public class CommandManager {
                 if (targetMethod.isAnnotationPresent(PAsync.class)) {
                     PAsync asyncAnno = targetMethod.getAnnotation(PAsync.class);
                     Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-                        invokeWithParsing(targetMethod, sender, effectiveArgs);
-                        if (asyncAnno.syncOnComplete()) {
-                            Bukkit.getScheduler().runTask(plugin, () -> {}); // Dummy task to sync, or we could wrap invokeWithParsing
+                        Object result = invokeWithParsing(targetMethod, sender, effectiveArgs);
+                        if (asyncAnno.syncOnComplete() && result instanceof Runnable runnable) {
+                            Bukkit.getScheduler().runTask(plugin, runnable);
                         }
                     });
                 } else {
@@ -246,7 +246,7 @@ public class CommandManager {
             return false;
         }
 
-        private void invokeWithParsing(Method method, CommandSender sender, String[] args) {
+        private Object invokeWithParsing(Method method, CommandSender sender, String[] args) {
             try {
                 Parameter[] params = method.getParameters();
                 Object[] values = new Object[params.length];
@@ -259,29 +259,29 @@ public class CommandManager {
                         values[i] = resolveSender(p.getType(), sender);
                         if (values[i] == null) {
                             sender.sendMessage("§cOnly " + p.getType().getSimpleName() + " can use this command.");
-                            return;
+                            return null;
                         }
                     } else if (p.isAnnotationPresent(PInt.class)) {
                         PInt anno = p.getAnnotation(PInt.class);
                         String raw = getArg(args, argIndex, anno.optional() ? String.valueOf(anno.defaultValue()) : null);
-                        if (raw == null) { sendMissingArg(sender, anno.name()); return; }
+                        if (raw == null) { sendMissingArg(sender, anno.name()); return null; }
                         if (argIndex < args.length) argIndex++;
                         
                         try {
                             int val = Integer.parseInt(raw);
                             if (val < anno.min() || val > anno.max()) {
                                 sender.sendMessage("§c" + anno.name() + " must be between " + anno.min() + " and " + anno.max());
-                                return;
+                                return null;
                             }
                             values[i] = val;
                         } catch (NumberFormatException e) {
                             sender.sendMessage("§c" + anno.name() + " must be a number.");
-                            return;
+                            return null;
                         }
                     } else if (p.isAnnotationPresent(PText.class)) {
                         PText anno = p.getAnnotation(PText.class);
                         String val = getArg(args, argIndex, anno.optional() ? anno.defaultValue() : null);
-                        if (val == null) { sendMissingArg(sender, anno.name()); return; }
+                        if (val == null) { sendMissingArg(sender, anno.name()); return null; }
                         if (argIndex < args.length) argIndex++;
                         values[i] = val;
                     } else if (p.isAnnotationPresent(PPlayer.class)) {
@@ -289,11 +289,11 @@ public class CommandManager {
                         String raw = getArg(args, argIndex, null);
                         if (raw == null) {
                             if (anno.optional()) values[i] = null;
-                            else { sendMissingArg(sender, anno.name()); return; }
+                            else { sendMissingArg(sender, anno.name()); return null; }
                         } else {
                             if (argIndex < args.length) argIndex++;
                             Player target = Bukkit.getPlayer(raw);
-                            if (target == null) { sender.sendMessage("§cPlayer not found: " + raw); return; }
+                            if (target == null) { sender.sendMessage("§cPlayer not found: " + raw); return null; }
                             values[i] = target;
                         }
                     } else {
@@ -304,10 +304,11 @@ public class CommandManager {
                     }
                 }
 
-                method.invoke(bean, values);
+                return method.invoke(bean, values);
             } catch (Exception e) {
                 logger.error("Failed to invoke command handler", e);
                 sender.sendMessage("§cAn error occurred during command execution.");
+                return null;
             }
         }
 
