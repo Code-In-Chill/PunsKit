@@ -1,5 +1,6 @@
 package com.punshub.punskit.config;
 
+import com.punshub.punskit.annotation.OnConfigReload;
 import com.punshub.punskit.annotation.Value;
 import com.punshub.punskit.logging.PunsLogger;
 import lombok.RequiredArgsConstructor;
@@ -7,6 +8,8 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -17,6 +20,18 @@ public class ConfigInjector {
 
     private final JavaPlugin plugin;
     private final PunsLogger logger;
+
+    /**
+     * Reloads configuration and re-injects all beans.
+     */
+    public void reloadAll(Collection<Object> beans) {
+        plugin.reloadConfig();
+        for (Object bean : beans) {
+            inject(bean);
+            invokeReloadHook(bean);
+        }
+        logger.info("✓ Configuration hot-reloaded and re-injected into {} bean(s).", beans.size());
+    }
 
     public void inject(Object bean) {
         FileConfiguration config = plugin.getConfig();
@@ -48,6 +63,19 @@ public class ConfigInjector {
                         path, field.getName(), clazz.getSimpleName());
             } catch (Exception e) {
                 logger.error("Failed to inject @Value into field: " + field.getName(), e);
+            }
+        }
+    }
+
+    private void invokeReloadHook(Object bean) {
+        for (Method method : bean.getClass().getDeclaredMethods()) {
+            if (method.isAnnotationPresent(OnConfigReload.class)) {
+                try {
+                    method.setAccessible(true);
+                    method.invoke(bean);
+                } catch (Exception e) {
+                    logger.error("Failed to invoke @OnConfigReload hook in " + bean.getClass().getSimpleName(), e);
+                }
             }
         }
     }

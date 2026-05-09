@@ -6,6 +6,7 @@ import com.punshub.punskit.exception.AmbiguousBeanException;
 import com.punshub.punskit.exception.BeanNotFoundException;
 import com.punshub.punskit.exception.CircularDependencyException;
 import com.punshub.punskit.logging.PunsLogger;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 import java.lang.reflect.Constructor;
@@ -25,6 +26,7 @@ public class BeanRegistry {
     private Set<Class<?>> allCandidates = new HashSet<>();
 
     private final PunsLogger logger;
+    @Getter
     private ConfigInjector configInjector;
 
     public void setConfigInjector(ConfigInjector injector) {
