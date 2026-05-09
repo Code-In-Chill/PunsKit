@@ -12,4 +12,10 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface PPostConstruct {
+    /**
+     * Whether this method should be re-invoked when the configuration is hot-reloaded.
+     * Note: If true, the framework will attempt to unregister existing listeners for this bean 
+     * before re-invoking to prevent duplicates.
+     */
+    boolean reinvokeOnReload() default false;
 }

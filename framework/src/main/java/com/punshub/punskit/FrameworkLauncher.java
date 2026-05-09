@@ -1,5 +1,6 @@
 package com.punshub.punskit;
 
+import com.punshub.punskit.command.BrigadierIntegration;
 import com.punshub.punskit.command.CommandManager;
 import com.punshub.punskit.command.ConditionRegistry;
 import com.punshub.punskit.config.ConfigInjector;
@@ -7,6 +8,12 @@ import com.punshub.punskit.container.BeanRegistry;
 import com.punshub.punskit.lifecycle.LifecycleManager;
 import com.punshub.punskit.logging.PunsLogger;
 import com.punshub.punskit.logging.Slf4jPunsLogger;
+import com.punshub.punskit.platform.PlatformAdapter;
+import com.punshub.punskit.platform.PlatformDetector;
+import com.punshub.punskit.platform.PlatformType;
+import com.punshub.punskit.platform.impl.FoliaAdapter;
+import com.punshub.punskit.platform.impl.LegacyAdapter;
+import com.punshub.punskit.platform.impl.PaperAdapter;
 import com.punshub.punskit.scanner.ClasspathScanner;
 import com.punshub.punskit.scheduler.SchedulerManager;
 import lombok.Getter;
@@ -31,6 +38,7 @@ public class FrameworkLauncher {
     private final ConditionRegistry conditionRegistry;
     private final SchedulerManager schedulerManager;
     private final PunsLogger logger;
+    private final PlatformAdapter platformAdapter;
 
     private FrameworkLauncher(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -41,8 +49,24 @@ public class FrameworkLauncher {
         this.commandManager = new CommandManager(plugin, conditionRegistry, logger.withContext("Command"));
         this.schedulerManager = new SchedulerManager(plugin, logger.withContext("Scheduler"));
 
+        // Platform Detection and Initialization
+        this.platformAdapter = createPlatformAdapter();
+        logger.info("Platform initialized: {}", platformAdapter.getType());
+
         ConfigInjector configInjector = new ConfigInjector(plugin, logger.withContext("Config"));
         this.registry.setConfigInjector(configInjector);
+    }
+
+    private PlatformAdapter createPlatformAdapter() {
+        PlatformType type = PlatformDetector.detect(logger);
+        return switch (type) {
+            case PAPER -> new PaperAdapter(
+                    commandManager,
+                    new BrigadierIntegration(plugin, commandManager, logger.withContext("Brigadier"))
+            );
+            case FOLIA -> new FoliaAdapter(commandManager, logger.withContext("Folia"));
+            default -> new LegacyAdapter(commandManager);
+        };
     }
 
     public static FrameworkLauncher start(JavaPlugin plugin, String basePackage) {
@@ -76,7 +100,10 @@ public class FrameworkLauncher {
         
         conditionRegistry.registerProviders(singletonBeans);
         registerListeners(singletonBeans);
-        commandManager.registerCommands(singletonBeans);
+        
+        // Use PlatformAdapter instead of direct commandManager call
+        platformAdapter.registerCommands(singletonBeans);
+        
         schedulerManager.registerSchedulers(singletonBeans);
 
         long elapsed = System.currentTimeMillis() - startTime;
@@ -104,7 +131,9 @@ public class FrameworkLauncher {
         Collection<Object> singletonBeans = registry.getAllBeans();
         unregisterListeners(singletonBeans);
         schedulerManager.shutdown();
-        commandManager.cleanup();
+        
+        // Use PlatformAdapter for cleanup
+        platformAdapter.unregisterCommands();
         
         lifecycleManager.invokePreDestroyAll(singletonBeans);
         logger.info("IoC Container shut down cleanly.");
