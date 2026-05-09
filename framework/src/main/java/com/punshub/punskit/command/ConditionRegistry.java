@@ -1,6 +1,6 @@
 package com.punshub.punskit.command;
 
-import com.punshub.punskit.annotation.PConditionProvider;
+import com.punshub.punskit.annotation.command.PConditionProvider;
 import com.punshub.punskit.exception.FrameworkException;
 import com.punshub.punskit.logging.PunsLogger;
 import lombok.RequiredArgsConstructor;

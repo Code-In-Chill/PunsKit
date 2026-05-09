@@ -1,14 +1,14 @@
 package com.yourname.testplugin.service;
 
-import com.punshub.punskit.annotation.PostConstruct;
-import com.punshub.punskit.annotation.Service;
+import com.punshub.punskit.annotation.di.PPostConstruct;
+import com.punshub.punskit.annotation.di.PService;
 import lombok.extern.slf4j.Slf4j;
 
-@Service
+@PService
 @Slf4j
 public class MessageService {
 
-    @PostConstruct
+    @PPostConstruct
     private void init() {
         log.info("[MessageService] Initialized.");
     }

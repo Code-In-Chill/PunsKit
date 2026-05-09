@@ -1,12 +1,12 @@
 package com.yourname.testplugin.command;
 
-import com.punshub.punskit.annotation.PConditionProvider;
-import com.punshub.punskit.annotation.PSender;
-import com.punshub.punskit.annotation.Service;
+import com.punshub.punskit.annotation.command.PConditionProvider;
+import com.punshub.punskit.annotation.command.arg.PSender;
+import com.punshub.punskit.annotation.di.PService;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-@Service
+@PService
 public class CommandConditions {
 
     @PConditionProvider("is_op")

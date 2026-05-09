@@ -1,11 +1,11 @@
 package com.yourname.testplugin.service;
 
-import com.punshub.punskit.annotation.PostConstruct;
-import com.punshub.punskit.annotation.Service;
+import com.punshub.punskit.annotation.di.PPostConstruct;
+import com.punshub.punskit.annotation.di.PService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-@Service
+@PService
 @RequiredArgsConstructor
 @Slf4j
 public class GameManager {
@@ -13,7 +13,7 @@ public class GameManager {
     private final PlayerService playerService;
     private final AuthService authService;
 
-    @PostConstruct
+    @PPostConstruct
     private void setup() {
         log.info("[GameManager] Ready! Dependency chain resolved successfully.");
 

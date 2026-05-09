@@ -1,4 +1,4 @@
-package com.punshub.punskit.annotation;
+package com.punshub.punskit.annotation.scheduler;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
-public @interface Scheduled {
+public @interface PScheduled {
     /**
      * Delay before the first execution (in ticks).
      */
@@ -18,7 +18,6 @@ public @interface Scheduled {
 
     /**
      * Period between successive executions (in ticks).
-     * If 0 or less, the task runs only once.
      */
     long period() default -1;
 
@@ -29,7 +28,6 @@ public @interface Scheduled {
 
     /**
      * Whether the task should run only once.
-     * Alias for setting period to -1.
      */
     boolean runOnce() default false;
 }

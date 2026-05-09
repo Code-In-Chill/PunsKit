@@ -1,7 +1,7 @@
 package com.punshub.punskit.scanner;
 
-import com.punshub.punskit.annotation.Component;
-import com.punshub.punskit.annotation.Service;
+import com.punshub.punskit.annotation.di.PComponent;
+import com.punshub.punskit.annotation.di.PService;
 import com.punshub.punskit.exception.FrameworkException;
 import com.punshub.punskit.logging.PunsLogger;
 import io.github.classgraph.ClassGraph;
@@ -22,7 +22,7 @@ public class ClasspathScanner {
     private final PunsLogger logger;
 
     /**
-     * Quét các class được đánh dấu {@code @Service} hoặc {@code @Component} trong package chỉ định.
+     * Quét các class được đánh dấu {@code @PService} hoặc {@code @PComponent} trong package chỉ định.
      *
      * @param plugin      Plugin đang chạy.
      * @param basePackage Package cơ sở để quét.
@@ -42,8 +42,8 @@ public class ClasspathScanner {
                 .acceptPackages(basePackage)
                 .scan()) {
 
-            Set<Class<?>> candidates = scanResult.getClassesWithAnnotation(Service.class.getName())
-                    .union(scanResult.getClassesWithAnnotation(Component.class.getName()))
+            Set<Class<?>> candidates = scanResult.getClassesWithAnnotation(PService.class.getName())
+                    .union(scanResult.getClassesWithAnnotation(PComponent.class.getName()))
                     .stream()
                     .filter(ci -> !ci.isInterface() && !ci.isAbstract())
                     .map(ci -> {

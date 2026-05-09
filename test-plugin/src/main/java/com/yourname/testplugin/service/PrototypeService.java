@@ -1,12 +1,12 @@
 package com.yourname.testplugin.service;
 
-import com.punshub.punskit.annotation.Scope;
-import com.punshub.punskit.annotation.ScopeType;
-import com.punshub.punskit.annotation.Service;
+import com.punshub.punskit.annotation.di.PScope;
+import com.punshub.punskit.annotation.di.PPScopeType;
+import com.punshub.punskit.annotation.di.PService;
 import lombok.extern.slf4j.Slf4j;
 
-@Service
-@Scope(ScopeType.PROTOTYPE)
+@PService
+@PScope(PScopeType.PROTOTYPE)
 @Slf4j
 public class PrototypeService {
     public PrototypeService() {

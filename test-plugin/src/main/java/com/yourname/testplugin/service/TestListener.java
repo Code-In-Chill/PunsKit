@@ -1,12 +1,12 @@
 package com.yourname.testplugin.service;
 
-import com.punshub.punskit.annotation.Service;
+import com.punshub.punskit.annotation.di.PService;
 import lombok.extern.slf4j.Slf4j;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 
-@Service
+@PService
 @Slf4j
 public class TestListener implements Listener {
 

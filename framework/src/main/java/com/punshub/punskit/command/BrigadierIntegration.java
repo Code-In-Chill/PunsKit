@@ -1,6 +1,6 @@
 package com.punshub.punskit.command;
 
-import com.punshub.punskit.annotation.PCommand;
+import com.punshub.punskit.annotation.command.PCommand;
 import com.punshub.punskit.logging.PunsLogger;
 import io.papermc.paper.command.brigadier.Commands;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;

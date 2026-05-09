@@ -1,7 +1,7 @@
 package com.punshub.punskit.config;
 
-import com.punshub.punskit.annotation.OnConfigReload;
-import com.punshub.punskit.annotation.Value;
+import com.punshub.punskit.annotation.config.POnConfigReload;
+import com.punshub.punskit.annotation.config.PValue;
 import com.punshub.punskit.exception.FrameworkException;
 import com.punshub.punskit.logging.PunsLogger;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +14,7 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * Injector cho các trường được đánh dấu bằng @Value.
+ * Injector cho các trường được đánh dấu bằng @PValue.
  */
 @RequiredArgsConstructor
 public class ConfigInjector {
@@ -38,7 +38,7 @@ public class ConfigInjector {
         Class<?> clazz = bean.getClass();
 
         for (Field field : clazz.getDeclaredFields()) {
-            Value annotation = field.getAnnotation(Value.class);
+            Value annotation = field.getAnnotation(PValue.class);
             if (annotation == null) continue;
 
             String path = parsePath(annotation.value());
@@ -58,22 +58,22 @@ public class ConfigInjector {
             try {
                 field.setAccessible(true);
                 field.set(bean, value);
-                logger.debug("Injected @Value({}) into field {} of {}", 
+                logger.debug("Injected @PValue({}) into field {} of {}", 
                         path, field.getName(), clazz.getSimpleName());
             } catch (Exception e) {
-                throw new FrameworkException("Failed to inject @Value into field: " + field.getName(), e);
+                throw new FrameworkException("Failed to inject @PValue into field: " + field.getName(), e);
             }
         }
     }
 
     private void invokeReloadHook(Object bean) {
         for (Method method : bean.getClass().getDeclaredMethods()) {
-            if (method.isAnnotationPresent(OnConfigReload.class)) {
+            if (method.isAnnotationPresent(POnConfigReload.class)) {
                 try {
                     method.setAccessible(true);
                     method.invoke(bean);
                 } catch (Exception e) {
-                    logger.error("Failed to invoke @OnConfigReload hook in " + bean.getClass().getSimpleName(), e);
+                    logger.error("Failed to invoke @POnConfigReload hook in " + bean.getClass().getSimpleName(), e);
                 }
             }
         }

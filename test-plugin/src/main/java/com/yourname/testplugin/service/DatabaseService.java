@@ -1,20 +1,20 @@
 package com.yourname.testplugin.service;
 
-import com.punshub.punskit.annotation.PostConstruct;
-import com.punshub.punskit.annotation.PreDestroy;
-import com.punshub.punskit.annotation.Service;
+import com.punshub.punskit.annotation.di.PPostConstruct;
+import com.punshub.punskit.annotation.di.PPreDestroy;
+import com.punshub.punskit.annotation.di.PService;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
  * Bean đơn giản nhất — không phụ thuộc vào Bean nào khác.
  */
-@Service
+@PService
 @NoArgsConstructor
 @Slf4j
 public class DatabaseService {
 
-    @PostConstruct
+    @PPostConstruct
     private void connect() {
         log.info("[DatabaseService] Connected to database. (PostConstruct ran)");
     }
@@ -23,7 +23,7 @@ public class DatabaseService {
         return "Result of: " + sql;
     }
 
-    @PreDestroy
+    @PPreDestroy
     private void disconnect() {
         log.info("[DatabaseService] Disconnected from database. (PreDestroy ran)");
     }

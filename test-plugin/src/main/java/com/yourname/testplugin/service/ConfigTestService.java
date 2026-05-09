@@ -1,31 +1,31 @@
 package com.yourname.testplugin.service;
 
-import com.punshub.punskit.annotation.OnConfigReload;
-import com.punshub.punskit.annotation.Service;
-import com.punshub.punskit.annotation.Value;
+import com.punshub.punskit.annotation.config.POnConfigReload;
+import com.punshub.punskit.annotation.di.PService;
+import com.punshub.punskit.annotation.config.PValue;
 import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Service
+@PService
 @Getter
 public class ConfigTestService {
 
     private static final Logger log = LoggerFactory.getLogger(ConfigTestService.class);
 
-    @Value("${server.name}")
+    @PValue("${server.name}")
     private String serverName;
 
-    @Value("server.port")
+    @PValue("server.port")
     private int serverPort;
 
-    @Value("${database.enabled}")
+    @PValue("${database.enabled}")
     private boolean databaseEnabled;
 
-    @Value(value = "non.existent", defaultValue = "Default Value")
+    @PValue(value = "non.existent", defaultValue = "Default Value")
     private String nonExistent;
 
-    @OnConfigReload
+    @POnConfigReload
     public void onReload() {
         log.info("✓ [Config] Hot-reload hook executed! New server name: {}", serverName);
     }

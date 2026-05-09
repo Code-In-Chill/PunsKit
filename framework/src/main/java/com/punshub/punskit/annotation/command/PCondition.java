@@ -1,4 +1,4 @@
-package com.punshub.punskit.annotation;
+package com.punshub.punskit.annotation.command;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
