@@ -7,58 +7,60 @@ IoC/DI Framework nhẹ cho Minecraft Plugin — lấy cảm hứng từ Spring B
 
 ```
 PunsKit/
-├── framework/          ← Core IoC Container (G1)
+├── core-kit/           ← Core IoC Container & Platform Abstraction (G1-G3)
 │   └── src/main/java/com/punshub/punskit/
-│       ├── FrameworkLauncher.java       ← Entry point
-│       ├── annotation/                  ← @PService, @PComponent, @PAutowired...
+│       ├── PunskitPlugin.java           ← Entry point (Kế thừa class này)
+│       ├── FrameworkLauncher.java       ← Framework engine
+│       ├── annotation/                  ← @PService, @PCommand, @PValue...
 │       ├── container/BeanRegistry.java  ← Dependency resolver
-│       ├── exception/                   ← Lỗi có message rõ ràng
-│       ├── lifecycle/LifecycleManager   ← @PPostConstruct, @PPreDestroy
-│       └── scanner/ClasspathScanner    ← Quét JAR tìm Bean
+│       ├── platform/                    ← Multi-version Adapter (Paper/Spigot)
+│       └── scanner/ClasspathScanner    ← Quét JAR bằng ClassGraph
 │
 └── test-plugin/        ← Plugin mẫu để verify framework
     └── src/main/java/com/yourname/testplugin/
-        ├── TestPlugin.java              ← 3 dòng để bật framework
-        └── service/                    ← DatabaseService → PlayerService → GameManager
+        ├── TestPlugin.java              ← Kế thừa PunskitPlugin
+        └── service/                    ← Các Bean thực tế
 ```
 
 ## Cách dùng nhanh
 
 **1. Trong plugin của bạn:**
+Thay vì kế thừa `JavaPlugin`, bạn kế thừa `PunskitPlugin`. Framework sẽ tự động lo mọi thứ về vòng đời!
+
 ```java
-public class MyPlugin extends JavaPlugin {
-    private FrameworkLauncher framework;
+package com.myplugin;
+
+import com.punshub.punskit.PunskitPlugin;
+
+public class MyPlugin extends PunskitPlugin {
 
     @Override
-    public void onEnable() {
-        framework = FrameworkLauncher.start(this, "com.myplugin");
-    }
-
-    @Override
-    public void onDisable() {
-        framework.shutdown();
+    public void onPluginEnable() {
+        getLogger().info("Plugin started with PunsKit!");
     }
 }
 ```
 
-**2. Tạo Bean:**
+**2. Tạo Bean (Service, Command, Listener):**
 ```java
 @PService
-public class PlayerService {
+@PCommand(name = "hello")
+public class HelloCommand implements org.bukkit.event.Listener {
     private final DatabaseService db;
 
-    public PlayerService(DatabaseService db) {
-        this.db = db; // framework tự inject
+    // Framework tự động inject dependencies
+    public HelloCommand(DatabaseService db) {
+        this.db = db; 
     }
 
-    @PPostConstruct
-    private void init() {
-        // chạy sau khi inject xong
+    @PCommandHandler
+    public void execute(@PSender Player player) {
+        player.sendMessage("Hello from PunsKit!");
     }
 
-    @PPreDestroy
-    private void cleanup() {
-        // chạy khi plugin tắt
+    @org.bukkit.event.EventHandler
+    public void onJoin(org.bukkit.event.player.PlayerJoinEvent e) {
+        // Framework cũng tự động đăng ký event này!
     }
 }
 ```
@@ -74,6 +76,7 @@ JAR output: `test-plugin/build/libs/test-plugin-1.0.0-SNAPSHOT.jar`
 ## Giai đoạn Phát triển
 
 - [x] **G1** — DI Container cơ bản (Constructor Injection, Lifecycle)
-- [ ] **G2** — Tích hợp Bukkit (Listener, Command, @PValue, @PScheduled)
-- [ ] **G3** — ClassGraph, Brigadier, Config hot-reload
+- [x] **G2** — Tích hợp Bukkit (Listener, Command, @PValue, @PScheduled)
+- [x] **G2.5** — Multi-version Abstraction (PaperMC, Folia, Spigot)
+- [x] **G3** — ClassGraph, Brigadier Native, Config hot-reload, @PAsync
 - [ ] **G4** — MethodHandles, APT compile-time (optional)
