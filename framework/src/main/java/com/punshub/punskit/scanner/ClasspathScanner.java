@@ -3,74 +3,62 @@ package com.punshub.punskit.scanner;
 import com.punshub.punskit.annotation.Component;
 import com.punshub.punskit.annotation.Service;
 import com.punshub.punskit.logging.PunsLogger;
+import io.github.classgraph.ClassGraph;
+import io.github.classgraph.ScanResult;
 import lombok.RequiredArgsConstructor;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.io.File;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
-import java.util.jar.JarFile;
+import java.util.stream.Collectors;
 
 /**
- * Quét JAR của plugin để tìm các class được đánh dấu {@code @Service} hoặc {@code @Component}.
+ * Quét classpath của plugin sử dụng ClassGraph để tìm các bean candidates.
  */
 @RequiredArgsConstructor
 public class ClasspathScanner {
 
     private final PunsLogger logger;
 
+    /**
+     * Quét các class được đánh dấu {@code @Service} hoặc {@code @Component} trong package chỉ định.
+     *
+     * @param plugin      Plugin đang chạy.
+     * @param basePackage Package cơ sở để quét.
+     * @return Tập hợp các class thỏa mãn điều kiện.
+     */
     public Set<Class<?>> scan(JavaPlugin plugin, String basePackage) {
-        Set<Class<?>> candidates = new HashSet<>();
-        ClassLoader classLoader = plugin.getClass().getClassLoader();
-        URL jarUrl = plugin.getClass().getProtectionDomain().getCodeSource().getLocation();
-        String packagePath = basePackage.replace('.', '/');
+        logger.info("Scanning package: {} using ClassGraph", basePackage);
+        long startTime = System.currentTimeMillis();
 
-        try {
-            File jarFile = new File(jarUrl.toURI());
-            logger.info("Scanning JAR: {} | package: {}", jarFile.getName(), basePackage);
+        ClassLoader pluginClassLoader = plugin.getClass().getClassLoader();
 
-            try (JarFile jar = new JarFile(jarFile)) {
-                jar.stream()
-                        .filter(entry ->
-                                entry.getName().startsWith(packagePath)
-                                && entry.getName().endsWith(".class")
-                                && !entry.getName().contains("$")
-                        )
-                        .forEach(entry -> {
-                            String className = entry.getName()
-                                    .replace('/', '.')
-                                    .replace(".class", "");
+        try (ScanResult scanResult = new ClassGraph()
+                .enableClassInfo()
+                .enableAnnotationInfo()
+                .ignoreParentModuleLayers() // Tránh quét các module của JVM
+                .overrideClassLoaders(pluginClassLoader) // Chỉ quét ClassLoader của plugin này
+                .acceptPackages(basePackage)
+                .scan()) {
 
-                            try {
-                                Class<?> clazz = classLoader.loadClass(className);
+            Set<Class<?>> candidates = scanResult.getClassesWithAnnotation(Service.class.getName())
+                    .union(scanResult.getClassesWithAnnotation(Component.class.getName()))
+                    .stream()
+                    .filter(ci -> !ci.isInterface() && !ci.isAbstract())
+                    .map(ci -> {
+                        try {
+                            return pluginClassLoader.loadClass(ci.getName());
+                        } catch (ClassNotFoundException e) {
+                            logger.warn("Could not load scanned class: {}", ci.getName());
+                            return null;
+                        }
+                    })
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
 
-                                if (isCandidate(clazz)) {
-                                    candidates.add(clazz);
-                                    logger.debug("Found candidate: {}", clazz.getSimpleName());
-                                }
-                            } catch (ClassNotFoundException e) {
-                                logger.warn("Could not load class: {}", className);
-                            }
-                        });
-            }
-
-        } catch (URISyntaxException | java.io.IOException e) {
-            throw new com.punshub.punskit.exception.FrameworkException(
-                    "Failed to scan JAR for plugin: " + plugin.getName(), e);
+            long elapsed = System.currentTimeMillis() - startTime;
+            logger.info("Scan complete. Found {} candidate(s) in {}ms.", candidates.size(), elapsed);
+            return candidates;
         }
-
-        logger.info("Scan complete. Found {} bean candidate(s).", candidates.size());
-        return candidates;
-    }
-
-    private boolean isCandidate(Class<?> clazz) {
-        if (clazz.isInterface()) return false;
-        if (clazz.isAnnotation()) return false;
-        if (java.lang.reflect.Modifier.isAbstract(clazz.getModifiers())) return false;
-
-        return clazz.isAnnotationPresent(Service.class)
-                || clazz.isAnnotationPresent(Component.class);
     }
 }

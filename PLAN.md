@@ -218,57 +218,40 @@ FUNCTION resolve(Class target):
 
 ---
 
-### 1.5 FrameworkLauncher & Tích hợp JavaPlugin
+### 1.5 PunskitPlugin & JavaPlugin Integration (ĐÃ HOÀN THÀNH)
+
+Để tối ưu hóa trải nghiệm (DX), framework cung cấp class abstract `PunskitPlugin` kế thừa `JavaPlugin`. Người dùng chỉ cần kế thừa class này để tự động kích hoạt IoC Container mà không cần viết code khởi tạo thủ công.
 
 ```java
-public class FrameworkLauncher {
+public abstract class PunskitPlugin extends JavaPlugin {
+    private FrameworkLauncher launcher;
     
-    private final BeanRegistry registry;
-    private final JavaPlugin plugin;
-    
-    public static FrameworkLauncher init(JavaPlugin plugin, String basePackage) {
-        FrameworkLauncher launcher = new FrameworkLauncher(plugin);
-        launcher.start(basePackage);
-        return launcher;
+    @Override
+    public final void onEnable() {
+        String basePkg = detectBasePackage(); // Tự động lấy package của class con
+        this.launcher = FrameworkLauncher.start(this, basePkg);
+        onPluginEnable();
     }
     
-    private void start(String basePackage) {
-        // 1. Quét class
-        Set<Class<?>> candidates = new ClasspathScanner().scan(plugin, basePackage);
-        
-        // 2. Resolve tất cả Bean
-        for (Class<?> candidate : candidates) {
-            registry.resolve(candidate);
-        }
-        
-        // 3. Gọi @PostConstruct (theo đúng thứ tự dependency)
-        registry.getAllBeans().forEach(this::invokePostConstruct);
+    @Override
+    public final void onDisable() {
+        onPluginDisable();
+        if (launcher != null) launcher.shutdown();
     }
     
-    public void shutdown() {
-        // Duyệt ngược để hủy theo đúng thứ tự
-        List<Object> beans = new ArrayList<>(registry.getAllBeans());
-        Collections.reverse(beans);
-        beans.forEach(this::invokePreDestroy);
-    }
-    
-    // Dùng trong plugin:
-    // private FrameworkLauncher launcher;
-    //
-    // @Override public void onEnable() {
-    //     launcher = FrameworkLauncher.init(this, "com.myplugin");
-    // }
-    //
-    // @Override public void onDisable() {
-    //     launcher.shutdown();
-    // }
+    public void onPluginEnable() {}
+    public void onPluginDisable() {}
+    public <T> T getBean(Class<T> type) { return launcher.getBean(type); }
 }
 ```
 
+`FrameworkLauncher` vẫn được giữ lại như một "Engine" xử lý logic bên dưới (Internal Orchestrator), trong khi `PunskitPlugin` đóng vai trò là giao diện người dùng (User-facing API).
+
 **Checklist:**
-- [x] `init()` không ném exception với plugin cơ bản
-- [x] `@PostConstruct` chạy đúng thứ tự (Bean lá trước, Bean cha sau)
-- [x] `@PreDestroy` chạy theo thứ tự ngược lại khi `onDisable()`
+- [x] `PunskitPlugin` tự động phát hiện package và quản lý lifecycle
+- [x] `onPluginEnable()` và `onPluginDisable()` hoạt động như hook thay thế
+- [x] `getBean()` có sẵn ngay trong class Plugin
+- [x] `FrameworkLauncher` xử lý việc quét class, đăng ký bean và quản lý lifecycle nội bộ
 - [x] Log rõ ràng từng bước (SLF4J Fluent API + Enterprise PunsLogger)
 - [x] Sử dụng Lombok để giảm boilerplate
 
@@ -406,14 +389,14 @@ private void registerCommand(Object bean, Command cmdAnnotation) {
 ```
 
 **Checklist:**
-- [ ] Lệnh hoạt động mà không cần khai báo trong `plugin.yml`
-- [ ] `@Subcommand` route đúng đến method tương ứng
-- [ ] Permission check được áp dụng tự động
-- [ ] Tab completion cơ bản hoạt động
+- [x] Lệnh hoạt động mà không cần khai báo trong `plugin.yml`
+- [x] `@Subcommand` route đúng đến method tương ứng
+- [x] Permission check được áp dụng tự động
+- [x] Tab completion cơ bản hoạt động (Hoàn thiện ở G3)
 
 ---
 
-### 2.4 Config Injection (@Value)
+### 2.4 Config Injection (@Value) (ĐÃ HOÀN THÀNH)
 
 ```java
 @Retention(RetentionPolicy.RUNTIME)
@@ -424,38 +407,15 @@ public @interface Value {
 }
 ```
 
-**Cơ chế injection sau khi Bean được tạo:**
-```java
-private void injectConfigValues(Object bean) {
-    FileConfiguration config = plugin.getConfig();
-    
-    for (Field field : bean.getClass().getDeclaredFields()) {
-        Value valueAnnotation = field.getAnnotation(Value.class);
-        if (valueAnnotation == null) continue;
-        
-        String path = parseConfigPath(valueAnnotation.value()); // bỏ ${}
-        field.setAccessible(true);
-        
-        Object value = config.get(path);
-        if (value == null) value = parseDefault(valueAnnotation.defaultValue(), field.getType());
-        if (value == null) throw new ConfigValueNotFoundException(path, bean.getClass());
-        
-        field.set(bean, convertType(value, field.getType()));
-    }
-}
-```
-
-**Type converter cần hỗ trợ:** `String`, `int/Integer`, `double/Double`, `boolean/Boolean`, `List<String>`
-
 **Checklist:**
-- [ ] `@Value("${server.name}")` inject đúng giá trị String
-- [ ] Type conversion hoạt động cho các kiểu cơ bản
-- [ ] `defaultValue` được dùng khi key không tồn tại trong config
-- [ ] Ném lỗi rõ ràng khi key bắt buộc không tồn tại
+- [x] `@Value("${server.name}")` inject đúng giá trị String
+- [x] Type conversion hoạt động cho các kiểu cơ bản
+- [x] `defaultValue` được dùng khi key không tồn tại trong config
+- [x] Ném lỗi rõ ràng khi key bắt buộc không tồn tại
 
 ---
 
-### 2.5 Scheduler Annotation
+### 2.5 Scheduler Annotation (ĐÃ HOÀN THÀNH)
 
 ```java
 @Retention(RetentionPolicy.RUNTIME)
@@ -468,33 +428,10 @@ public @interface Scheduled {
 }
 ```
 
-```java
-private void registerSchedulers(Object bean) {
-    for (Method method : bean.getClass().getDeclaredMethods()) {
-        Scheduled scheduled = method.getAnnotation(Scheduled.class);
-        if (scheduled == null) continue;
-        
-        Runnable task = () -> {
-            try { method.invoke(bean); }
-            catch (Exception e) { logger.warning("Scheduler error in " + method.getName()); }
-        };
-        
-        BukkitScheduler scheduler = Bukkit.getScheduler();
-        if (scheduled.runOnce()) {
-            if (scheduled.async()) scheduler.runTaskLaterAsynchronously(plugin, task, scheduled.delay());
-            else scheduler.runTaskLater(plugin, task, scheduled.delay());
-        } else {
-            if (scheduled.async()) scheduler.runTaskTimerAsynchronously(plugin, task, scheduled.delay(), scheduled.period());
-            else scheduler.runTaskTimer(plugin, task, scheduled.delay(), scheduled.period());
-        }
-    }
-}
-```
-
 **Checklist:**
-- [ ] Method được gọi đúng interval
-- [ ] `async = true` không chạy trên main thread (verify bằng `Bukkit.isPrimaryThread()`)
-- [ ] Task được cancel khi plugin tắt (lưu BukkitTask reference, cancel trong shutdown)
+- [x] Method được gọi đúng interval
+- [x] `async = true` không chạy trên main thread
+- [x] Task được cancel khi plugin tắt
 
 ---
 

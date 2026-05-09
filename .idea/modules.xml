@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/framework/punskit.framework.main.iml" filepath="$PROJECT_DIR$/.idea/modules/framework/punskit.framework.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/framework/punskit.framework.test.iml" filepath="$PROJECT_DIR$/.idea/modules/framework/punskit.framework.test.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/test-plugin/punskit.test-plugin.main.iml" filepath="$PROJECT_DIR$/.idea/modules/test-plugin/punskit.test-plugin.main.iml" />
     </modules>
   </component>
