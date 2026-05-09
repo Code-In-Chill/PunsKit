@@ -48,6 +48,18 @@ public abstract class PunskitPlugin extends JavaPlugin {
     }
 
     /**
+     * Reloads the plugin configuration and re-injects all @Value fields.
+     */
+    @Override
+    public void reloadConfig() {
+        if (launcher != null) {
+            launcher.reloadConfig();
+        } else {
+            super.reloadConfig();
+        }
+    }
+
+    /**
      * Called when the plugin is enabled and the IoC container is ready.
      */
     public void onPluginEnable() {

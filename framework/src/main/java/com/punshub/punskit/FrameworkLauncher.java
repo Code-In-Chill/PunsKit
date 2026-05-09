@@ -126,6 +126,13 @@ public class FrameworkLauncher {
         return registry.getBean(type);
     }
 
+    public void reloadConfig() {
+        ConfigInjector injector = registry.getConfigInjector();
+        if (injector != null) {
+            injector.reloadAll(registry.getAllBeans());
+        }
+    }
+
     private boolean isPaper() {
         try {
             Class.forName("io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents");
