@@ -1,6 +1,5 @@
 package com.punshub.punskit.platform;
 
-import com.punshub.punskit.annotation.command.PCommand;
 import java.util.Collection;
 
 /**
@@ -17,9 +16,16 @@ public interface PlatformAdapter {
      * Đăng ký các bean lệnh vào hệ thống của nền tảng.
      * QUAN TRỌNG: Nên được gọi trong onLoad() để hỗ trợ tốt nhất cho Brigadier.
      *
-     * @param beans Danh sách các bean đã được khởi tạo chứa annotation @PCommand.
+     * @param classes Danh sách các class candidate chứa annotation @PCommand.
      */
-    void registerCommands(Collection<Object> beans);
+    void registerCommands(Collection<Class<?>> classes);
+
+    /**
+     * Hook gọi khi plugin được enable. Dùng cho các nền tảng cần đăng ký lệnh muộn (như Spigot).
+     *
+     * @param beans Danh sách các bean đã được khởi tạo.
+     */
+    void onEnable(Collection<Object> beans);
 
     /**
      * Hủy đăng ký các lệnh khi plugin tắt.

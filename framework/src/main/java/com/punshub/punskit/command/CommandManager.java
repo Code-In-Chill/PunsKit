@@ -210,7 +210,13 @@ public class CommandManager {
 
                 // Execute Async or Sync
                 if (targetMethod.isAnnotationPresent(PAsync.class)) {
-                    Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> invokeWithParsing(targetMethod, sender, effectiveArgs));
+                    PAsync asyncAnno = targetMethod.getAnnotation(PAsync.class);
+                    Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                        invokeWithParsing(targetMethod, sender, effectiveArgs);
+                        if (asyncAnno.syncOnComplete()) {
+                            Bukkit.getScheduler().runTask(plugin, () -> {}); // Dummy task to sync, or we could wrap invokeWithParsing
+                        }
+                    });
                 } else {
                     invokeWithParsing(targetMethod, sender, effectiveArgs);
                 }

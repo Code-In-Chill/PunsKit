@@ -21,7 +21,13 @@ public class LegacyAdapter implements PlatformAdapter {
     }
 
     @Override
-    public void registerCommands(Collection<Object> beans) {
+    public void registerCommands(Collection<Class<?>> classes) {
+        // Spigot không hỗ trợ đăng ký lệnh trong onLoad hoặc đăng ký class rỗng.
+        // Ta sẽ thực hiện đăng ký thực sự trong onEnable khi đã có instance của bean.
+    }
+
+    @Override
+    public void onEnable(Collection<Object> beans) {
         commandManager.registerCommands(beans);
     }
 

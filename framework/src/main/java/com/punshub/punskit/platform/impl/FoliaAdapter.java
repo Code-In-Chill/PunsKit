@@ -25,9 +25,14 @@ public class FoliaAdapter extends LegacyAdapter {
     }
 
     @Override
-    public void registerCommands(Collection<Object> beans) {
+    public void registerCommands(Collection<Class<?>> classes) {
         logger.warn("Running on Folia. Command registration is falling back to Legacy (CommandMap).");
         logger.warn("Note: Regionized multithreading is not fully supported yet in this adapter.");
-        super.registerCommands(beans);
+        super.registerCommands(classes);
+    }
+
+    @Override
+    public void onEnable(Collection<Object> beans) {
+        super.onEnable(beans);
     }
 }

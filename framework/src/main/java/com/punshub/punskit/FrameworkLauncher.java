@@ -1,6 +1,5 @@
 package com.punshub.punskit;
 
-import com.punshub.punskit.command.BrigadierIntegration;
 import com.punshub.punskit.command.CommandManager;
 import com.punshub.punskit.command.ConditionRegistry;
 import com.punshub.punskit.config.ConfigInjector;
@@ -11,9 +10,7 @@ import com.punshub.punskit.logging.Slf4jPunsLogger;
 import com.punshub.punskit.platform.PlatformAdapter;
 import com.punshub.punskit.platform.PlatformDetector;
 import com.punshub.punskit.platform.PlatformType;
-import com.punshub.punskit.platform.impl.FoliaAdapter;
 import com.punshub.punskit.platform.impl.LegacyAdapter;
-import com.punshub.punskit.platform.impl.PaperAdapter;
 import com.punshub.punskit.scanner.ClasspathScanner;
 import com.punshub.punskit.scheduler.SchedulerManager;
 import lombok.Getter;
@@ -40,7 +37,7 @@ public class FrameworkLauncher {
     private final PunsLogger logger;
     private final PlatformAdapter platformAdapter;
 
-    private FrameworkLauncher(JavaPlugin plugin) {
+    private FrameworkLauncher(JavaPlugin plugin, String basePackage) {
         this.plugin = plugin;
         this.logger = new Slf4jPunsLogger(plugin.getSLF4JLogger(), "PunsKit");
         this.registry = new BeanRegistry(logger.withContext("Registry"));
@@ -59,25 +56,38 @@ public class FrameworkLauncher {
 
     private PlatformAdapter createPlatformAdapter() {
         PlatformType type = PlatformDetector.detect(logger);
-        return switch (type) {
-            case PAPER -> new PaperAdapter(
-                    commandManager,
-                    new BrigadierIntegration(plugin, commandManager, logger.withContext("Brigadier"))
-            );
-            case FOLIA -> new FoliaAdapter(commandManager, logger.withContext("Folia"));
-            default -> new LegacyAdapter(commandManager);
-        };
+        try {
+            return switch (type) {
+                case PAPER -> {
+                    Class<?> adapterClass = Class.forName("com.punshub.punskit.platform.impl.PaperAdapter");
+                    Class<?> brigadierClass = Class.forName("com.punshub.punskit.command.BrigadierIntegration");
+                    Object brigadier = brigadierClass.getConstructor(JavaPlugin.class, CommandManager.class, BeanRegistry.class, PunsLogger.class)
+                            .newInstance(plugin, commandManager, registry, logger.withContext("Brigadier"));
+                    yield (PlatformAdapter) adapterClass.getConstructor(CommandManager.class, brigadierClass)
+                            .newInstance(commandManager, brigadier);
+                }
+                case FOLIA -> {
+                    Class<?> adapterClass = Class.forName("com.punshub.punskit.platform.impl.FoliaAdapter");
+                    yield (PlatformAdapter) adapterClass.getConstructor(CommandManager.class, PunsLogger.class)
+                            .newInstance(commandManager, logger.withContext("Folia"));
+                }
+                default -> new LegacyAdapter(commandManager);
+            };
+        } catch (Exception e) {
+            logger.error("Failed to initialize platform adapter for {}. Falling back to Legacy.", type, e);
+            return new LegacyAdapter(commandManager);
+        }
     }
 
-    public static FrameworkLauncher start(JavaPlugin plugin, String basePackage) {
-        FrameworkLauncher launcher = new FrameworkLauncher(plugin);
-        launcher.initialize(basePackage);
+    public static FrameworkLauncher bootstrap(JavaPlugin plugin, String basePackage) {
+        FrameworkLauncher launcher = new FrameworkLauncher(plugin, basePackage);
+        launcher.bootstrap(basePackage);
         return launcher;
     }
 
-    private void initialize(String basePackage) {
+    private void bootstrap(String basePackage) {
         long startTime = System.currentTimeMillis();
-        logger.info("Starting IoC Container...");
+        logger.info("Bootstrapping IoC Container...");
 
         ClasspathScanner scanner = new ClasspathScanner(logger.withContext("Scanner"));
         Set<Class<?>> candidates = scanner.scan(plugin, basePackage);
@@ -88,7 +98,19 @@ public class FrameworkLauncher {
         }
 
         registry.registerCandidates(candidates);
+        
+        // Command registration (Paper will register Brigadier nodes here)
+        platformAdapter.registerCommands(candidates);
 
+        long elapsed = System.currentTimeMillis() - startTime;
+        logger.info("IoC Container bootstrapped in {}ms.", elapsed);
+    }
+
+    public void initialize() {
+        long startTime = System.currentTimeMillis();
+        logger.info("Finalizing IoC Container initialization...");
+
+        Collection<Class<?>> candidates = registry.getAllCandidates();
         for (Class<?> candidate : candidates) {
             if (!registry.containsBean(candidate)) {
                 registry.resolve(candidate);
@@ -101,14 +123,14 @@ public class FrameworkLauncher {
         conditionRegistry.registerProviders(singletonBeans);
         registerListeners(singletonBeans);
         
-        // Use PlatformAdapter instead of direct commandManager call
-        platformAdapter.registerCommands(singletonBeans);
+        // Post-initialization platform hook (Legacy will register commands here)
+        platformAdapter.onEnable(singletonBeans);
         
         schedulerManager.registerSchedulers(singletonBeans);
 
         long elapsed = System.currentTimeMillis() - startTime;
-        logger.info("IoC Container started. {} bean(s) registered in {}ms.",
-                candidates.size(), elapsed);
+        logger.info("IoC Container initialized. {} bean(s) registered in {}ms.",
+                singletonBeans.size(), elapsed);
     }
 
     private void registerListeners(Collection<Object> beans) {
@@ -159,7 +181,9 @@ public class FrameworkLauncher {
     public void reloadConfig() {
         ConfigInjector injector = registry.getConfigInjector();
         if (injector != null) {
-            injector.reinjectAll(registry.getAllBeans());
+            Collection<Object> beans = registry.getAllBeans();
+            injector.reinjectAll(beans);
+            lifecycleManager.invokePostConstructOnReload(beans);
         }
     }
 

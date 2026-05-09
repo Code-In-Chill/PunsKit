@@ -3,7 +3,6 @@ package com.punshub.punskit.platform.impl;
 import com.punshub.punskit.command.BrigadierIntegration;
 import com.punshub.punskit.command.CommandManager;
 import com.punshub.punskit.platform.PlatformType;
-import lombok.RequiredArgsConstructor;
 
 import java.util.Collection;
 
@@ -25,9 +24,14 @@ public class PaperAdapter extends LegacyAdapter {
     }
 
     @Override
-    public void registerCommands(Collection<Object> beans) {
+    public void registerCommands(Collection<Class<?>> classes) {
         // Trên Paper, ta ưu tiên dùng Brigadier thông qua Lifecycle API
-        brigadier.registerCommands(beans);
+        brigadier.registerCommands(classes);
+    }
+
+    @Override
+    public void onEnable(Collection<Object> beans) {
+        // Đã đăng ký qua Brigadier trong bootstrap/onLoad, không cần làm gì thêm ở đây.
     }
 
     @Override

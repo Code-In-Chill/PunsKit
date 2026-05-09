@@ -27,6 +27,24 @@ public class LifecycleManager {
         }
     }
 
+    public void invokePostConstructOnReload(Collection<Object> beans) {
+        for (Object bean : beans) {
+            List<Method> methods = findAnnotatedMethods(bean.getClass(), PPostConstruct.class);
+            for (Method method : methods) {
+                PPostConstruct annotation = method.getAnnotation(PPostConstruct.class);
+                if (annotation.reinvokeOnReload()) {
+                    // Tránh duplicate listener nếu bean là Listener và @PPostConstruct thực hiện đăng ký
+                    if (bean instanceof org.bukkit.event.Listener listener) {
+                        org.bukkit.event.HandlerList.unregisterAll(listener);
+                        logger.debug("Unregistered listener for {} before @PPostConstruct reinvocation.", 
+                                bean.getClass().getSimpleName());
+                    }
+                    invoke(bean, method, "@PPostConstruct (Reload)");
+                }
+            }
+        }
+    }
+
     public void invokePreDestroyAll(Collection<Object> beans) {
         List<Object> reversed = new ArrayList<>(beans);
         Collections.reverse(reversed);

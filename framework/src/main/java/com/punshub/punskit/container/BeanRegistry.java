@@ -46,6 +46,10 @@ public class BeanRegistry {
         }
     }
 
+    public Collection<Class<?>> getAllCandidates() {
+        return Collections.unmodifiableCollection(allCandidates);
+    }
+
     @SuppressWarnings("unchecked")
     public <T> T resolve(Class<T> type) {
         if (isSingleton(type) && beans.containsKey(type)) {

@@ -1,6 +1,7 @@
 package com.punshub.punskit.command;
 
 import com.punshub.punskit.annotation.command.PCommand;
+import com.punshub.punskit.container.BeanRegistry;
 import com.punshub.punskit.logging.PunsLogger;
 import io.papermc.paper.command.brigadier.Commands;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
@@ -18,20 +19,21 @@ public class BrigadierIntegration {
 
     private final JavaPlugin plugin;
     private final CommandManager commandManager;
+    private final BeanRegistry registry;
     private final PunsLogger logger;
 
     /**
      * Đăng ký các bean lệnh vào hệ thống Brigadier của Paper.
      */
-    public void registerCommands(Collection<Object> beans) {
+    public void registerCommands(Collection<Class<?>> commandClasses) {
         plugin.getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
             final Commands commands = event.registrar();
 
             int count = 0;
-            for (Object bean : beans) {
-                PCommand annotation = bean.getClass().getAnnotation(PCommand.class);
+            for (Class<?> clazz : commandClasses) {
+                PCommand annotation = clazz.getAnnotation(PCommand.class);
                 if (annotation != null) {
-                    registerBrigadier(commands, bean, annotation);
+                    registerBrigadier(commands, clazz, annotation);
                     count++;
                 }
             }
@@ -42,12 +44,13 @@ public class BrigadierIntegration {
         });
     }
 
-    private void registerBrigadier(Commands registrar, Object bean, PCommand annotation) {
+    private void registerBrigadier(Commands registrar, Class<?> clazz, PCommand annotation) {
         String name = annotation.name();
         
         registrar.register(
             Commands.literal(name)
                 .executes(ctx -> {
+                    Object bean = registry.resolve(clazz);
                     commandManager.execute(bean, annotation, ctx.getSource().getSender(), ctx.getInput());
                     return 1;
                 })
