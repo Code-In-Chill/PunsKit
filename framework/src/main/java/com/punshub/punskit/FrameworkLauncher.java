@@ -1,10 +1,14 @@
 package com.punshub.punskit;
 
+import com.punshub.punskit.command.CommandManager;
+import com.punshub.punskit.command.ConditionRegistry;
+import com.punshub.punskit.config.ConfigInjector;
 import com.punshub.punskit.container.BeanRegistry;
 import com.punshub.punskit.lifecycle.LifecycleManager;
 import com.punshub.punskit.logging.PunsLogger;
 import com.punshub.punskit.logging.Slf4jPunsLogger;
 import com.punshub.punskit.scanner.ClasspathScanner;
+import com.punshub.punskit.scheduler.SchedulerManager;
 import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.event.HandlerList;
@@ -23,6 +27,9 @@ public class FrameworkLauncher {
     @Getter
     private final BeanRegistry registry;
     private final LifecycleManager lifecycleManager;
+    private final CommandManager commandManager;
+    private final ConditionRegistry conditionRegistry;
+    private final SchedulerManager schedulerManager;
     private final PunsLogger logger;
 
     private FrameworkLauncher(JavaPlugin plugin) {
@@ -30,6 +37,12 @@ public class FrameworkLauncher {
         this.logger = new Slf4jPunsLogger(plugin.getSLF4JLogger(), "PunsKit");
         this.registry = new BeanRegistry(logger.withContext("Registry"));
         this.lifecycleManager = new LifecycleManager(logger.withContext("Lifecycle"));
+        this.conditionRegistry = new ConditionRegistry(logger.withContext("Condition"));
+        this.commandManager = new CommandManager(plugin, conditionRegistry, logger.withContext("Command"));
+        this.schedulerManager = new SchedulerManager(plugin, logger.withContext("Scheduler"));
+
+        ConfigInjector configInjector = new ConfigInjector(plugin, logger.withContext("Config"));
+        this.registry.setConfigInjector(configInjector);
     }
 
     public static FrameworkLauncher start(JavaPlugin plugin, String basePackage) {
@@ -61,7 +74,10 @@ public class FrameworkLauncher {
         Collection<Object> singletonBeans = registry.getAllBeans();
         lifecycleManager.invokePostConstructAll(singletonBeans);
         
+        conditionRegistry.registerProviders(singletonBeans);
         registerListeners(singletonBeans);
+        commandManager.registerCommands(singletonBeans);
+        schedulerManager.registerSchedulers(singletonBeans);
 
         long elapsed = System.currentTimeMillis() - startTime;
         logger.info("IoC Container started. {} bean(s) registered in {}ms.",
@@ -87,6 +103,8 @@ public class FrameworkLauncher {
         
         Collection<Object> singletonBeans = registry.getAllBeans();
         unregisterListeners(singletonBeans);
+        schedulerManager.shutdown();
+        commandManager.cleanup();
         
         lifecycleManager.invokePreDestroyAll(singletonBeans);
         logger.info("IoC Container shut down cleanly.");
@@ -108,4 +126,13 @@ public class FrameworkLauncher {
     public <T> T getBean(Class<T> type) {
         return registry.getBean(type);
     }
+
+    public void reloadConfig() {
+        ConfigInjector injector = registry.getConfigInjector();
+        if (injector != null) {
+            injector.reinjectAll(registry.getAllBeans());
+        }
+    }
+
+
 }
