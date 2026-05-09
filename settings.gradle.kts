@@ -1,4 +1,4 @@
 rootProject.name = "punskit"
 
-include("framework")
+include("core-kit")
 include("test-plugin")
