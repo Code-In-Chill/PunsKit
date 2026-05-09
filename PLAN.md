@@ -451,9 +451,39 @@ Plugin test thực tế với:
 
 ---
 
-## Giai đoạn 3 — Tối ưu hóa & PaperMC Hiện đại
+## Giai đoạn 3 — Multi-version Abstraction & PaperMC Hiện đại
 
-> **Tuần 5–6 | Kết quả:** Hiệu năng tốt hơn, tương thích Brigadier, production-ready
+> **Tuần 5–6 | Kết quả:** Hỗ trợ đa nền tảng (Paper, Spigot, Folia), Brigadier, production-ready
+
+### 3.0 Platform Abstraction Layer (MỚI - Giai đoạn 2.5)
+
+Trước khi tiến lên các tính năng cao cấp của Paper, chúng ta cần xây dựng lớp trừu tượng để framework có thể chạy trên nhiều nền tảng mà không gây lỗi `ClassNotFound`.
+
+**1. Platform Adapter Interface:**
+```java
+public interface PlatformAdapter {
+    /**
+     * Đăng ký command. Phải gọi trong onLoad() để Brigadier tab-complete hoạt động tốt.
+     */
+    void registerCommands(Collection<Object> beans);
+    void unregisterCommands();
+    PunsLogger getPlatformLogger();
+}
+```
+
+**2. Platform Detector (Thứ tự check quan trọng):**
+Luôn check từ cụ thể nhất đến chung nhất để tránh nhận diện sai (Folia kế thừa Paper).
+1. **Folia** (Check `io.papermc.paper.threadedregions.RegionizedServer`)
+2. **Paper** (Check `io.papermc.paper.plugin.lifecycle.event.LifecycleEventManager`)
+3. **Spigot/Legacy** (Fallback)
+
+**Checklist:**
+- [ ] `PlatformDetector` nhận diện đúng server đang chạy.
+- [ ] `PaperAdapter` triển khai Brigadier Integration.
+- [ ] `LegacyAdapter` triển khai fallback qua `CommandMap`.
+- [ ] `FoliaAdapter` kế thừa `LegacyAdapter` với cảnh báo về threading.
+
+---
 
 ### 3.1 Nâng cấp Scanner lên ClassGraph
 
@@ -475,8 +505,8 @@ public Set<Class<?>> scan(JavaPlugin plugin, String basePackage) {
             .acceptPackages(basePackage)
             .scan()) {
         
-        return result.getClassesWithAnnotation(Service.class.getName())
-            .union(result.getClassesWithAnnotation(Component.class.getName()))
+        return result.getClassesWithAnnotation(PService.class.getName())
+            .union(result.getClassesWithAnnotation(PComponent.class.getName()))
             .stream()
             .filter(ci -> !ci.isInterface() && !ci.isAbstract())
             .map(ci -> {
@@ -500,7 +530,7 @@ public Set<Class<?>> scan(JavaPlugin plugin, String basePackage) {
 
 ### 3.2 Brigadier Integration (PaperMC 1.20.6+)
 
-**Thay thế CommandMap bằng LifecycleEventManager:**
+**QUAN TRỌNG:** Phải đăng ký trong `onLoad()`, không phải `onEnable()`.
 
 ```java
 // Trong FrameworkLauncher, gọi trong onLoad() của plugin (không phải onEnable)
@@ -508,49 +538,23 @@ public void registerBrigadierCommands(LifecycleEventManager<Plugin> manager) {
     manager.registerEventHandler(LifecycleEvents.COMMANDS, event -> {
         Commands commands = event.registrar();
         
-        for (Object bean : registry.getBeansWithAnnotation(Command.class)) {
-            Command cmdAnnotation = bean.getClass().getAnnotation(Command.class);
+        for (Object bean : registry.getBeansWithAnnotation(PCommand.class)) {
+            PCommand cmdAnnotation = bean.getClass().getAnnotation(PCommand.class);
             LiteralCommandNode<CommandSourceStack> node = buildCommandTree(bean, cmdAnnotation);
             commands.register(node, cmdAnnotation.description());
         }
     });
-}
-
-private LiteralCommandNode<CommandSourceStack> buildCommandTree(Object bean, Command annotation) {
-    var root = net.minecraft.commands.Commands.literal(annotation.name());
-    
-    // Quét các @PSubcommand method và build tree
-    for (Method method : bean.getClass().getDeclaredMethods()) {
-        Subcommand sub = method.getAnnotation(Subcommand.class);
-        if (sub != null) {
-            root.then(buildSubcommandNode(bean, method, sub));
-        }
-    }
-    
-    return root.build();
-}
-```
-
-**Lưu ý:** Brigadier chỉ available trên PaperMC, không có trên Spigot thuần. Cần guard:
-```java
-private boolean isBrigadierAvailable() {
-    try {
-        Class.forName("io.papermc.paper.command.brigadier.Commands");
-        return true;
-    } catch (ClassNotFoundException e) {
-        return false;
-    }
 }
 ```
 
 **Checklist:**
 - [ ] Lệnh đăng ký qua Brigadier hiện tab-completion client-side
 - [ ] Lệnh vẫn hoạt động sau `/reload`
-- [ ] Fallback về CommandMap nếu không phải PaperMC
+- [ ] Fallback về CommandMap nếu không phải PaperMC (thông qua `LegacyAdapter`)
 
 ---
 
-### 3.3 Config Hot-reload (Bonus G3)
+### 3.3 Config Hot-reload & Lifecycle Safety
 
 Khi admin chạy lệnh reload config, tự động re-inject `@PValue` vào tất cả Bean:
 
@@ -559,16 +563,40 @@ public void reloadConfig() {
     plugin.reloadConfig();
     registry.getAllBeans().forEach(bean -> {
         injectConfigValues(bean);  // re-inject từ config mới
-        invokePostConstruct(bean); // gọi lại @PPostConstruct nếu cần
+        
+        // Chỉ gọi lại nếu được đánh dấu và đảm bảo an toàn listener
+        if (shouldReinvoke(bean)) {
+            handleListenerUnregistration(bean); // Tránh duplicate listener
+            invokePostConstruct(bean);
+        }
     });
 }
 ```
 
-Tạo built-in command `/[pluginname] reload` tự động có trong mọi plugin dùng framework.
-
 **Checklist:**
 - [ ] Config thay đổi → Bean nhận giá trị mới mà không cần restart server
-- [ ] `@PPostConstruct` được gọi lại sau reload nếu được đánh dấu `reinvokeOnReload = true`
+- [ ] `@PPostConstruct(reinvokeOnReload = true)` được gọi lại an toàn.
+- [ ] Framework tự động unregister listener cũ trước khi re-invoke.
+
+---
+
+### 3.4 @PAsync Thread Safety (Java 21 Virtual Threads)
+
+Virtual Threads rất mạnh nhưng cần cẩn thận với Bukkit API không thread-safe.
+
+```java
+@PAsync(syncOnComplete = true)
+public void processData() {
+    // Chạy trên virtual thread (Project Loom)
+    var data = db.fetch(); 
+    // Sau khi xong, framework tự động sync về main thread nếu syncOnComplete = true
+    player.sendMessage("Data: " + data);
+}
+```
+
+**Checklist:**
+- [ ] `@PAsync` mặc định chạy trên Virtual Threads.
+- [ ] `syncOnComplete = true` đưa task về main thread sau khi hoàn thành.
 
 ---
 
