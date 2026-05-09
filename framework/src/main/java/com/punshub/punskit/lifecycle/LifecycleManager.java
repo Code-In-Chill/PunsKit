@@ -1,7 +1,7 @@
 package com.punshub.punskit.lifecycle;
 
-import com.punshub.punskit.annotation.PostConstruct;
-import com.punshub.punskit.annotation.PreDestroy;
+import com.punshub.punskit.annotation.di.PPostConstruct;
+import com.punshub.punskit.annotation.di.PPreDestroy;
 import com.punshub.punskit.exception.FrameworkException;
 import com.punshub.punskit.logging.PunsLogger;
 import lombok.RequiredArgsConstructor;
@@ -13,8 +13,8 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Quản lý vòng đời của Bean: gọi {@code @PostConstruct} khi khởi tạo
- * và {@code @PreDestroy} khi plugin tắt.
+ * Quản lý vòng đời của Bean: gọi {@code @PPostConstruct} khi khởi tạo
+ * và {@code @PPreDestroy} khi plugin tắt.
  */
 @RequiredArgsConstructor
 public class LifecycleManager {
@@ -37,24 +37,24 @@ public class LifecycleManager {
     }
 
     private void invokePostConstruct(Object bean) {
-        List<Method> methods = findAnnotatedMethods(bean.getClass(), PostConstruct.class);
+        List<Method> methods = findAnnotatedMethods(bean.getClass(), PPostConstruct.class);
 
         if (methods.size() > 1) {
             throw new FrameworkException(
                     "Bean '" + bean.getClass().getSimpleName() + "' has " + methods.size() +
-                    " @PostConstruct methods. Only 1 is allowed."
+                    " @PPostConstruct methods. Only 1 is allowed."
             );
         }
 
         for (Method method : methods) {
-            invoke(bean, method, "@PostConstruct");
+            invoke(bean, method, "@PPostConstruct");
         }
     }
 
     private void invokePreDestroy(Object bean) {
-        List<Method> methods = findAnnotatedMethods(bean.getClass(), PreDestroy.class);
+        List<Method> methods = findAnnotatedMethods(bean.getClass(), PPreDestroy.class);
         for (Method method : methods) {
-            invoke(bean, method, "@PreDestroy");
+            invoke(bean, method, "@PPreDestroy");
         }
     }
 

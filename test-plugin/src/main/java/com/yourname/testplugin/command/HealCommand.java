@@ -1,11 +1,15 @@
 package com.yourname.testplugin.command;
 
-import com.punshub.punskit.annotation.*;
+import com.punshub.punskit.annotation.di.*;
+import com.punshub.punskit.annotation.command.*;
+import com.punshub.punskit.annotation.command.arg.*;
+import com.punshub.punskit.annotation.config.*;
+import com.punshub.punskit.annotation.scheduler.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-@Service
+@PService
 @PCommand(name = "heal", description = "Heal yourself or others", permission = "punskit.command.heal", aliases = {"h"})
 public class HealCommand {
 

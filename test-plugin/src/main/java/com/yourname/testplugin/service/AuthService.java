@@ -1,11 +1,11 @@
 package com.yourname.testplugin.service;
 
-import com.punshub.punskit.annotation.PostConstruct;
-import com.punshub.punskit.annotation.Service;
+import com.punshub.punskit.annotation.di.PPostConstruct;
+import com.punshub.punskit.annotation.di.PService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-@Service
+@PService
 @RequiredArgsConstructor
 @Slf4j
 public class AuthService {
@@ -13,7 +13,7 @@ public class AuthService {
     private final DatabaseService databaseService;
     private final MessageService messageService;
 
-    @PostConstruct
+    @PPostConstruct
     private void init() {
         log.info("[AuthService] Initialized with DB and Messages.");
     }

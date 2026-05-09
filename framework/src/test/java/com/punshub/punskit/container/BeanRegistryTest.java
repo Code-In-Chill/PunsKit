@@ -1,8 +1,8 @@
 package com.punshub.punskit.container;
 
-import com.punshub.punskit.annotation.Scope;
-import com.punshub.punskit.annotation.ScopeType;
-import com.punshub.punskit.annotation.Service;
+import com.punshub.punskit.annotation.di.PScope;
+import com.punshub.punskit.annotation.di.PScopeType;
+import com.punshub.punskit.annotation.di.PService;
 import com.punshub.punskit.logging.PunsLogger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,11 +21,11 @@ class BeanRegistryTest {
         registry = new BeanRegistry(new DummyLogger());
     }
 
-    @Service
+    @PService
     static class SingletonBean {}
 
-    @Service
-    @Scope(ScopeType.PROTOTYPE)
+    @PService
+    @PScope(PScopeType.PROTOTYPE)
     static class PrototypeBean {}
 
     @Test

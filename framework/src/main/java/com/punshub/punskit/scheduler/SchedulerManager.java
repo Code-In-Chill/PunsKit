@@ -1,6 +1,6 @@
 package com.punshub.punskit.scheduler;
 
-import com.punshub.punskit.annotation.Scheduled;
+import com.punshub.punskit.annotation.scheduler.PScheduled;
 import com.punshub.punskit.logging.PunsLogger;
 import lombok.RequiredArgsConstructor;
 import org.bukkit.Bukkit;
@@ -26,7 +26,7 @@ public class SchedulerManager {
         int count = 0;
         for (Object bean : beans) {
             for (Method method : bean.getClass().getDeclaredMethods()) {
-                Scheduled annotation = method.getAnnotation(Scheduled.class);
+                PScheduled annotation = method.getAnnotation(PScheduled.class);
                 if (annotation != null) {
                     scheduleTask(bean, method, annotation);
                     count++;
@@ -38,9 +38,9 @@ public class SchedulerManager {
         }
     }
 
-    private void scheduleTask(Object bean, Method method, Scheduled annotation) {
+    private void scheduleTask(Object bean, Method method, PScheduled annotation) {
         if (method.getParameterCount() > 0) {
-            logger.error("Method {} in {} has @Scheduled but has parameters. Scheduled methods must have zero parameters. Skipping.",
+            logger.error("Method {} in {} has @PScheduled but has parameters. Scheduled methods must have zero parameters. Skipping.",
                     method.getName(), bean.getClass().getSimpleName());
             return;
         }

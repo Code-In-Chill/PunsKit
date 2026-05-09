@@ -1,6 +1,10 @@
 package com.punshub.punskit.command;
 
-import com.punshub.punskit.annotation.*;
+import com.punshub.punskit.annotation.di.*;
+import com.punshub.punskit.annotation.command.*;
+import com.punshub.punskit.annotation.command.arg.*;
+import com.punshub.punskit.annotation.config.*;
+import com.punshub.punskit.annotation.scheduler.*;
 import com.punshub.punskit.logging.PunsLogger;
 import lombok.RequiredArgsConstructor;
 import org.bukkit.Bukkit;

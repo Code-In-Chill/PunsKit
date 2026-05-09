@@ -48,7 +48,7 @@ public abstract class PunskitPlugin extends JavaPlugin {
     }
 
     /**
-     * Reloads the plugin configuration and re-injects all @Value fields.
+     * Reloads the plugin configuration and re-injects all @PValue fields.
      */
     @Override
     public void reloadConfig() {
