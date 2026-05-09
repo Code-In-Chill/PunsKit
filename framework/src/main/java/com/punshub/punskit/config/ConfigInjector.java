@@ -38,9 +38,8 @@ public class ConfigInjector {
         Class<?> clazz = bean.getClass();
 
         for (Field field : clazz.getDeclaredFields()) {
-            Value annotation = field.getAnnotation(PValue.class);
+            PValue annotation = field.getAnnotation(PValue.class);
             if (annotation == null) continue;
-
             String path = parsePath(annotation.value());
             Object value = config.get(path);
 

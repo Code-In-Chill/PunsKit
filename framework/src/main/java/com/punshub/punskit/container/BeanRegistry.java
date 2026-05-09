@@ -134,7 +134,7 @@ public class BeanRegistry {
         Object[] args = new Object[params.length];
         for (int i = 0; i < params.length; i++) {
             Class<?> paramType = params[i].getType();
-            Qualifier qualifier = params[i].getAnnotation(PQualifier.class);
+            PQualifier qualifier = params[i].getAnnotation(PQualifier.class);
             if (qualifier != null) {
                 args[i] = resolveWithQualifier(paramType, qualifier.value());
             } else {
@@ -153,7 +153,7 @@ public class BeanRegistry {
         if (qualifierName != null) {
             List<Class<?>> qualified = impls.stream()
                     .filter(impl -> {
-                        Qualifier q = impl.getAnnotation(PQualifier.class);
+                        PQualifier q = impl.getAnnotation(PQualifier.class);
                         return q != null && q.value().equals(qualifierName);
                     })
                     .collect(Collectors.toList());

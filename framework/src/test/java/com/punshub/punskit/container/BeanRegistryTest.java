@@ -1,7 +1,7 @@
 package com.punshub.punskit.container;
 
 import com.punshub.punskit.annotation.di.PScope;
-import com.punshub.punskit.annotation.di.PPScopeType;
+import com.punshub.punskit.annotation.di.PScopeType;
 import com.punshub.punskit.annotation.di.PService;
 import com.punshub.punskit.logging.PunsLogger;
 import org.junit.jupiter.api.BeforeEach;

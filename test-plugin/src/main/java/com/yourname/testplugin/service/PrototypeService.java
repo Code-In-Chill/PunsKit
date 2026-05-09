@@ -1,7 +1,7 @@
 package com.yourname.testplugin.service;
 
 import com.punshub.punskit.annotation.di.PScope;
-import com.punshub.punskit.annotation.di.PPScopeType;
+import com.punshub.punskit.annotation.di.PScopeType;
 import com.punshub.punskit.annotation.di.PService;
 import lombok.extern.slf4j.Slf4j;
 
