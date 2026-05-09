@@ -1,0 +1,43 @@
+name: Sync Master to Develop
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check for open PR from develop to master
+        id: check_pr
+        run: |
+          # Kiểm tra xem có PR nào từ develop vào master đang mở không
+          PR_EXISTS=$(gh pr list --base master --head develop --state open --json number --jq '.[0].number')
+          if [ -n "$PR_EXISTS" ]; then
+            echo "found_pr=true" >> $GITHUB_OUTPUT
+            echo "Active PR found: #$PR_EXISTS"
+          else
+            echo "found_pr=false" >> $GITHUB_OUTPUT
+            echo "No active PR from develop to master found."
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Merge master into develop
+        if: steps.check_pr.outputs.found_pr == 'false'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git checkout develop
+          git merge origin/master --no-edit
+          git push origin develop

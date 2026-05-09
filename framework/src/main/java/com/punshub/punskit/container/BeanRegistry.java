@@ -1,10 +1,16 @@
 package com.punshub.punskit.container;
 
-import com.punshub.punskit.annotation.*;
+import com.punshub.punskit.annotation.di.*;
+import com.punshub.punskit.annotation.command.*;
+import com.punshub.punskit.annotation.command.arg.*;
+import com.punshub.punskit.annotation.config.*;
+import com.punshub.punskit.annotation.scheduler.*;
+import com.punshub.punskit.config.ConfigInjector;
 import com.punshub.punskit.exception.AmbiguousBeanException;
 import com.punshub.punskit.exception.BeanNotFoundException;
 import com.punshub.punskit.exception.CircularDependencyException;
 import com.punshub.punskit.logging.PunsLogger;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 import java.lang.reflect.Constructor;
@@ -24,6 +30,12 @@ public class BeanRegistry {
     private Set<Class<?>> allCandidates = new HashSet<>();
 
     private final PunsLogger logger;
+    @Getter
+    private ConfigInjector configInjector;
+
+    public void setConfigInjector(ConfigInjector injector) {
+        this.configInjector = injector;
+    }
 
     public void registerCandidates(Set<Class<?>> candidates) {
         this.allCandidates = candidates;
@@ -32,6 +44,10 @@ public class BeanRegistry {
                     interfaceMap.computeIfAbsent(iface, k -> new ArrayList<>()).add(candidate)
             );
         }
+    }
+
+    public Collection<Class<?>> getAllCandidates() {
+        return Collections.unmodifiableCollection(allCandidates);
     }
 
     @SuppressWarnings("unchecked")
@@ -46,10 +62,10 @@ public class BeanRegistry {
     }
 
     private boolean isSingleton(Class<?> type) {
-        if (!type.isAnnotationPresent(Scope.class)) {
+        if (!type.isAnnotationPresent(PScope.class)) {
             return true;
         }
-        return type.getAnnotation(Scope.class).value() == ScopeType.SINGLETON;
+        return type.getAnnotation(PScope.class).value() == PScopeType.SINGLETON;
     }
 
     @SuppressWarnings("unchecked")
@@ -76,6 +92,11 @@ public class BeanRegistry {
 
             T instance = (T) constructor.newInstance(args);
             
+            // Perform post-instantiation injection
+            if (configInjector != null) {
+                configInjector.inject(instance);
+            }
+
             if (isSingleton(type)) {
                 beans.put(type, instance);
                 logger.info("✓ Created singleton bean: {}", type.getSimpleName());
@@ -97,7 +118,7 @@ public class BeanRegistry {
     private Constructor<?> findConstructor(Class<?> type) {
         Constructor<?>[] constructors = type.getDeclaredConstructors();
         for (Constructor<?> ctor : constructors) {
-            if (ctor.isAnnotationPresent(Autowired.class)) {
+            if (ctor.isAnnotationPresent(PAutowired.class)) {
                 ctor.setAccessible(true);
                 return ctor;
             }
@@ -108,7 +129,7 @@ public class BeanRegistry {
         }
         throw new com.punshub.punskit.exception.FrameworkException(
                 "Bean '" + type.getSimpleName() + "' has " + constructors.length +
-                " constructors but none is annotated with @Autowired."
+                " constructors but none is annotated with @PAutowired."
         );
     }
 
@@ -117,7 +138,7 @@ public class BeanRegistry {
         Object[] args = new Object[params.length];
         for (int i = 0; i < params.length; i++) {
             Class<?> paramType = params[i].getType();
-            Qualifier qualifier = params[i].getAnnotation(Qualifier.class);
+            PQualifier qualifier = params[i].getAnnotation(PQualifier.class);
             if (qualifier != null) {
                 args[i] = resolveWithQualifier(paramType, qualifier.value());
             } else {
@@ -136,7 +157,7 @@ public class BeanRegistry {
         if (qualifierName != null) {
             List<Class<?>> qualified = impls.stream()
                     .filter(impl -> {
-                        Qualifier q = impl.getAnnotation(Qualifier.class);
+                        PQualifier q = impl.getAnnotation(PQualifier.class);
                         return q != null && q.value().equals(qualifierName);
                     })
                     .collect(Collectors.toList());
@@ -147,7 +168,7 @@ public class BeanRegistry {
             return resolve((Class<T>) impls.get(0));
         }
         List<Class<?>> primaryImpls = impls.stream()
-                .filter(impl -> impl.isAnnotationPresent(Primary.class))
+                .filter(impl -> impl.isAnnotationPresent(PPrimary.class))
                 .collect(Collectors.toList());
         if (primaryImpls.size() == 1) {
             return resolve((Class<T>) primaryImpls.get(0));

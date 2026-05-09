@@ -19,8 +19,8 @@ jobs:
           echo "Target Branch: $BASE_REF"
           
           if [[ "$BASE_REF" == "master" ]]; then
-            if [[ "$HEAD_REF" != "develop" ]]; then
-              echo "Error: Only 'develop' can be merged into 'master'."
+            if [[ "$HEAD_REF" != "develop" && ! "$HEAD_REF" =~ ^hotfix/ ]]; then
+              echo "Error: Only 'develop' or 'hotfix/*' branches can be merged into 'master'."
               exit 1
             fi
           fi

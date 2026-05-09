@@ -10,10 +10,10 @@ PunsKit/
 ├── framework/          ← Core IoC Container (G1)
 │   └── src/main/java/com/punshub/punskit/
 │       ├── FrameworkLauncher.java       ← Entry point
-│       ├── annotation/                  ← @Service, @Component, @Autowired...
+│       ├── annotation/                  ← @PService, @PComponent, @PAutowired...
 │       ├── container/BeanRegistry.java  ← Dependency resolver
 │       ├── exception/                   ← Lỗi có message rõ ràng
-│       ├── lifecycle/LifecycleManager   ← @PostConstruct, @PreDestroy
+│       ├── lifecycle/LifecycleManager   ← @PPostConstruct, @PPreDestroy
 │       └── scanner/ClasspathScanner    ← Quét JAR tìm Bean
 │
 └── test-plugin/        ← Plugin mẫu để verify framework
@@ -43,7 +43,7 @@ public class MyPlugin extends JavaPlugin {
 
 **2. Tạo Bean:**
 ```java
-@Service
+@PService
 public class PlayerService {
     private final DatabaseService db;
 
@@ -51,12 +51,12 @@ public class PlayerService {
         this.db = db; // framework tự inject
     }
 
-    @PostConstruct
+    @PPostConstruct
     private void init() {
         // chạy sau khi inject xong
     }
 
-    @PreDestroy
+    @PPreDestroy
     private void cleanup() {
         // chạy khi plugin tắt
     }
@@ -74,6 +74,6 @@ JAR output: `test-plugin/build/libs/test-plugin-1.0.0-SNAPSHOT.jar`
 ## Giai đoạn Phát triển
 
 - [x] **G1** — DI Container cơ bản (Constructor Injection, Lifecycle)
-- [ ] **G2** — Tích hợp Bukkit (Listener, Command, @Value, @Scheduled)
+- [ ] **G2** — Tích hợp Bukkit (Listener, Command, @PValue, @PScheduled)
 - [ ] **G3** — ClassGraph, Brigadier, Config hot-reload
 - [ ] **G4** — MethodHandles, APT compile-time (optional)

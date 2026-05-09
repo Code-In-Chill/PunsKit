@@ -5,7 +5,7 @@ import java.util.stream.Collectors;
 
 /**
  * Ném ra khi có nhiều Bean cùng thỏa mãn một dependency
- * mà không có {@code @Primary} hay {@code @Qualifier} để phân biệt.
+ * mà không có {@code @PPrimary} hay {@code @PQualifier} để phân biệt.
  */
 public class AmbiguousBeanException extends FrameworkException {
 
@@ -19,7 +19,7 @@ public class AmbiguousBeanException extends FrameworkException {
                 .collect(Collectors.joining(", "));
         return String.format(
                 "Ambiguous bean for type '%s'. Found %d candidates: [%s].%n" +
-                "Fix: add @Primary to one of them, or use @Qualifier to specify.",
+                "Fix: add @PPrimary to one of them, or use @PQualifier to specify.",
                 type.getSimpleName(), candidates.size(), list
         );
     }
