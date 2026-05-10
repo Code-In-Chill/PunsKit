@@ -5,6 +5,7 @@ plugins {
 
 group = "com.punshub.punskit"
 version = project.findProperty("version")?.toString()?.replace("v", "") 
+    ?: System.getenv("JITPACK_VERSION")?.replace("v", "")
     ?: System.getenv("GITHUB_REF_NAME")?.replace("v", "") 
     ?: "1.0.0-SNAPSHOT"
 
