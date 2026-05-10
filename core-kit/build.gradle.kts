@@ -16,7 +16,7 @@ val resolvedVersion = when {
 }.replace("v", "")
 
 version = resolvedVersion
-println("Resolved project version: \$version")
+println("Resolved project version: \${project.version}")
 
 dependencies {
     // Lombok
