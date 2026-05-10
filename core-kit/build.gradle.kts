@@ -9,7 +9,7 @@ val jitpackVersion = System.getenv("JITPACK_VERSION")?.trim()
 val githubVersion = System.getenv("GITHUB_REF_NAME")?.trim()
 
 val resolvedVersion = when {
-    !rawVersion.isNullOrBlank() -> rawVersion
+    !rawVersion.isNullOrBlank() && rawVersion != "unspecified" -> rawVersion
     !jitpackVersion.isNullOrBlank() -> jitpackVersion
     !githubVersion.isNullOrBlank() -> githubVersion
     else -> "1.0.0-SNAPSHOT"
