@@ -11,7 +11,7 @@ dependencies {
     annotationProcessor("org.projectlombok:lombok:1.18.32")
 
     // Nhúng framework vào plugin — dùng "implementation" để shadow đóng gói luôn
-    implementation(project(path = ":framework", configuration = "shadow"))
+    implementation(project(path = ":core-kit", configuration = "shadow"))
 
     // Paper API
     compileOnly("io.papermc.paper:paper-api:1.20.6-R0.1-SNAPSHOT")

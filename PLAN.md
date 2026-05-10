@@ -56,11 +56,11 @@ PunsKit/
 └── settings.gradle
 ```
 
-**`build.gradle` của framework module:**
+**`build.gradle.kts` của core-kit module:**
 ```groovy
 plugins {
     id 'java'
-    id 'com.github.johnrengelman.shadow' version '8.1.1'
+    id 'com.gradleup.shadow' version '8.3.5'
 }
 
 dependencies {
@@ -76,7 +76,7 @@ shadowJar {
 **Checklist:**
 - [x] Multi-module Gradle setup chạy được
 - [x] `shadowJar` task tạo ra JAR có package đã được relocate
-- [x] test-plugin depend vào framework và build thành công
+- [x] test-plugin depend vào core-kit và build thành công
 
 ---
 
@@ -522,9 +522,9 @@ public Set<Class<?>> scan(JavaPlugin plugin, String basePackage) {
 **Lưu ý quan trọng:** Phải `shade` ClassGraph vào JAR và relocate package của nó. Không để ClassGraph là optional dependency.
 
 **Checklist:**
-- [ ] Scan nhanh hơn so với cách thủ công G1 (đo bằng System.nanoTime())
-- [ ] Không quét class của Paper/Bukkit (verify bằng log)
-- [ ] Hoạt động ổn định khi plugin có 50+ class
+- [x] Scan nhanh hơn so với cách thủ công G1 (đo bằng System.nanoTime())
+- [x] Không quét class của Paper/Bukkit (verify bằng log)
+- [x] Hoạt động ổn định khi plugin có 50+ class
 
 ---
 
@@ -595,8 +595,8 @@ public void processData() {
 ```
 
 **Checklist:**
-- [ ] `@PAsync` mặc định chạy trên Virtual Threads.
-- [ ] `syncOnComplete = true` đưa task về main thread sau khi hoàn thành.
+- [x] `@PAsync` mặc định chạy trên Virtual Threads.
+- [x] `syncOnComplete = true` đưa task về main thread sau khi hoàn thành.
 
 ---
 
@@ -719,10 +719,14 @@ Tuần 7+ │ G4: MethodHandles (nếu cần), APT (nếu muốn)
 - [x] **G1 Done:** Một plugin với 5+ Bean khởi động không lỗi, DI graph đúng, shutdown sạch
 - [ ] **G2 Done:** Plugin mini-game đơn giản được xây hoàn toàn bằng framework, không có `registerEvents()`/`registerCommand()` thủ công
 
-- **G3 Done:** Startup < 50ms với 20 Bean, Brigadier tab-completion hoạt động, config reload không crash
+- [x] **G3 Done:** Startup < 50ms với 20 Bean, Brigadier tab-completion hoạt động, config reload không crash
 - **G4 Done:** APT sinh factory class, runtime không dùng Reflection cho known Bean
 
 ---
 
 *Cập nhật lần cuối: theo đánh giá và tinh chỉnh từ báo cáo nghiên cứu gốc*
+ốc*
+�c*
+ốc*
+ốc*
 ốc*
