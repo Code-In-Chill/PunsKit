@@ -1,5 +1,5 @@
 jdk:
   - openjdk21
 install:
-  - ./gradlew :core-kit:shadowJar
-  - ./gradlew :core-kit:publishToMavenLocal
+  - ./gradlew :core-kit:shadowJar -Pversion=${VERSION:-${JITPACK_VERSION:-develop-SNAPSHOT}}
+  - ./gradlew :core-kit:publishToMavenLocal -Pversion=${VERSION:-${JITPACK_VERSION:-develop-SNAPSHOT}}

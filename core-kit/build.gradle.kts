@@ -5,13 +5,14 @@ plugins {
 
 group = "com.punshub.punskit"
 val rawVersion = project.findProperty("version")?.toString()?.trim()
-val jitpackVersion = System.getenv("JITPACK_VERSION")?.trim()
+val jitpackVersion = (System.getenv("JITPACK_VERSION") ?: System.getenv("VERSION"))?.trim()
 val githubVersion = System.getenv("GITHUB_REF_NAME")?.trim()
 
 val resolvedVersion = when {
     !rawVersion.isNullOrBlank() && rawVersion != "unspecified" -> rawVersion
     !jitpackVersion.isNullOrBlank() -> jitpackVersion
     !githubVersion.isNullOrBlank() -> githubVersion
+    System.getenv("JITPACK") == "true" -> "develop-SNAPSHOT"
     else -> "1.0.0-SNAPSHOT"
 }.replace("v", "")
 
