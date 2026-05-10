@@ -4,10 +4,19 @@ plugins {
 }
 
 group = "com.punshub.punskit"
-version = project.findProperty("version")?.toString()?.replace("v", "") 
-    ?: System.getenv("JITPACK_VERSION")?.replace("v", "")
-    ?: System.getenv("GITHUB_REF_NAME")?.replace("v", "") 
-    ?: "1.0.0-SNAPSHOT"
+val rawVersion = project.findProperty("version")?.toString()?.trim()
+val jitpackVersion = System.getenv("JITPACK_VERSION")?.trim()
+val githubVersion = System.getenv("GITHUB_REF_NAME")?.trim()
+
+val resolvedVersion = when {
+    !rawVersion.isNullOrBlank() -> rawVersion
+    !jitpackVersion.isNullOrBlank() -> jitpackVersion
+    !githubVersion.isNullOrBlank() -> githubVersion
+    else -> "1.0.0-SNAPSHOT"
+}.replace("v", "")
+
+version = resolvedVersion
+println("Resolved project version: \$version")
 
 dependencies {
     // Lombok
