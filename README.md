@@ -73,6 +73,29 @@ public class HelloCommand implements org.bukkit.event.Listener {
 
 JAR output: `test-plugin/build/libs/test-plugin-1.0.0-SNAPSHOT.jar`
 
+## Installation
+
+Add PunsKit to your `build.gradle.kts`. JitPack allows you to use PunsKit without any complex token configuration.
+
+### Update `build.gradle.kts`
+
+```kotlin
+repositories {
+    maven("https://jitpack.io")
+}
+
+dependencies {
+    // Format: com.github.User:Repo:Module:Tag
+    implementation("com.github.Code-In-Chill:PunsKit:core-kit:v1.3.0")
+}
+
+tasks.shadowJar {
+    relocate("com.punshub.punskit", "your.package.shaded.punskit")
+}
+```
+
+For more details, see the **[🚀 Getting Started Guide](wiki/Getting-Started.md)**.
+
 ## Giai đoạn Phát triển
 
 - [x] **G1** — DI Container cơ bản (Constructor Injection, Lifecycle)
