@@ -85,9 +85,15 @@ repositories {
 }
 
 dependencies {
-    // Format: com.github.User:Repo:Module:Tag
-    implementation("com.github.Code-In-Chill:PunsKit:core-kit:v1.3.0")
+    // Format: com.github.User:Repo:Module:Version
+
+    // Recommended: Stable Release
+    implementation("com.github.Code-In-Chill.PunsKit:core-kit:v1.1.0")
+
+    // Optional: Nightly Build (Latest features from develop branch)
+    // implementation("com.github.Code-In-Chill.PunsKit:core-kit:develop-SNAPSHOT")
 }
+```
 
 tasks.shadowJar {
     relocate("com.punshub.punskit", "your.package.shaded.punskit")
