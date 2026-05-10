@@ -1,6 +1,6 @@
 // Root build file — cấu hình chung cho tất cả submodule
 plugins {
-    java
+    // No code in root project
 }
 
 subprojects {
