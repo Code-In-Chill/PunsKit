@@ -15,8 +15,12 @@ val resolvedVersion = when {
     else -> "1.0.0-SNAPSHOT"
 }.replace("v", "")
 
-version = resolvedVersion
-println("Resolved project version: \${project.version}")
+println("DEBUG: JITPACK_VERSION env: " + System.getenv("JITPACK_VERSION"))
+println("DEBUG: GITHUB_REF_NAME env: " + System.getenv("GITHUB_REF_NAME"))
+println("DEBUG: version property: " + project.findProperty("version"))
+
+project.version = resolvedVersion
+println("Final Resolved version: " + project.version)
 
 dependencies {
     // Lombok
