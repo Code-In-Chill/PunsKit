@@ -2,3 +2,4 @@ jdk:
   - openjdk21
 install:
   - ./gradlew :core-kit:shadowJar
+  - ./gradlew :core-kit:publishToMavenLocal -Pversion=$JITPACK_VERSION
