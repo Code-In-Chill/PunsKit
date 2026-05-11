@@ -107,10 +107,11 @@ public class BeanRegistry {
             return instance;
 
         } catch (Exception e) {
-            if (e instanceof com.punshub.punskit.exception.FrameworkException fe) throw fe;
+            if (e instanceof com.punshub.punskit.exception.FrameworkException) throw (com.punshub.punskit.exception.FrameworkException) e;
             throw new com.punshub.punskit.exception.FrameworkException(
                     "Failed to create bean: " + type.getSimpleName(), e);
-        } finally {
+        }
+ finally {
             currentlyResolving.remove(type);
         }
     }
