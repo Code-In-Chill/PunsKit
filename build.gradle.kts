@@ -6,7 +6,7 @@ plugins {
 subprojects {
     apply(plugin = "java")
 
-    java {
+    configure<org.gradle.api.plugins.JavaPluginExtension> {
         toolchain {
             languageVersion.set(JavaLanguageVersion.of(21))
         }
