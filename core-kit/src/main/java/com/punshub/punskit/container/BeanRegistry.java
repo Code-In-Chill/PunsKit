@@ -1,10 +1,6 @@
 package com.punshub.punskit.container;
 
 import com.punshub.punskit.annotation.di.*;
-import com.punshub.punskit.annotation.command.*;
-import com.punshub.punskit.annotation.command.arg.*;
-import com.punshub.punskit.annotation.config.*;
-import com.punshub.punskit.annotation.scheduler.*;
 import com.punshub.punskit.config.ConfigInjector;
 import com.punshub.punskit.exception.AmbiguousBeanException;
 import com.punshub.punskit.exception.BeanNotFoundException;
@@ -16,7 +12,6 @@ import lombok.RequiredArgsConstructor;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Parameter;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Trung tâm lưu trữ và giải quyết phụ thuộc của IoC Container.
@@ -40,9 +35,13 @@ public class BeanRegistry {
     public void registerCandidates(Set<Class<?>> candidates) {
         this.allCandidates = candidates;
         for (Class<?> candidate : candidates) {
-            collectInterfaces(candidate).forEach(iface ->
-                    interfaceMap.computeIfAbsent(iface, k -> new ArrayList<>()).add(candidate)
-            );
+            Set<Class<?>> interfaces = collectInterfaces(candidate);
+            for (Class<?> iface : interfaces) {
+                if (!interfaceMap.containsKey(iface)) {
+                    interfaceMap.put(iface, new ArrayList<>());
+                }
+                interfaceMap.get(iface).add(candidate);
+            }
         }
     }
 
@@ -107,11 +106,12 @@ public class BeanRegistry {
             return instance;
 
         } catch (Exception e) {
-            if (e instanceof com.punshub.punskit.exception.FrameworkException) throw (com.punshub.punskit.exception.FrameworkException) e;
+            if (e instanceof com.punshub.punskit.exception.FrameworkException) {
+                throw (com.punshub.punskit.exception.FrameworkException) e;
+            }
             throw new com.punshub.punskit.exception.FrameworkException(
                     "Failed to create bean: " + type.getSimpleName(), e);
-        }
- finally {
+        } finally {
             currentlyResolving.remove(type);
         }
     }
@@ -151,26 +151,32 @@ public class BeanRegistry {
 
     @SuppressWarnings("unchecked")
     private <T> T resolveByInterface(Class<T> interfaceType, String qualifierName) {
-        List<Class<?>> impls = interfaceMap.getOrDefault(interfaceType, Collections.emptyList());
-        if (impls.isEmpty()) {
+        List<Class<?>> impls = interfaceMap.get(interfaceType);
+        if (impls == null || impls.isEmpty()) {
             throw new BeanNotFoundException(interfaceType);
         }
+
         if (qualifierName != null) {
-            List<Class<?>> qualified = impls.stream()
-                    .filter(impl -> {
-                        PQualifier q = impl.getAnnotation(PQualifier.class);
-                        return q != null && q.value().equals(qualifierName);
-                    })
-                    .collect(Collectors.toList());
-            if (qualified.size() == 1) return resolve((Class<T>) qualified.get(0));
+            for (Class<?> impl : impls) {
+                PQualifier q = impl.getAnnotation(PQualifier.class);
+                if (q != null && q.value().equals(qualifierName)) {
+                    return resolve((Class<T>) impl);
+                }
+            }
             throw new BeanNotFoundException(interfaceType);
         }
+
         if (impls.size() == 1) {
             return resolve((Class<T>) impls.get(0));
         }
-        List<Class<?>> primaryImpls = impls.stream()
-                .filter(impl -> impl.isAnnotationPresent(PPrimary.class))
-                .collect(Collectors.toList());
+
+        List<Class<?>> primaryImpls = new ArrayList<>();
+        for (Class<?> impl : impls) {
+            if (impl.isAnnotationPresent(PPrimary.class)) {
+                primaryImpls.add(impl);
+            }
+        }
+
         if (primaryImpls.size() == 1) {
             return resolve((Class<T>) primaryImpls.get(0));
         }

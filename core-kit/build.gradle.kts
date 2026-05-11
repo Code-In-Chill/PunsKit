@@ -3,14 +3,14 @@ plugins {
     `maven-publish`
 }
 
-group = "com.punshub.punskit"
+group = "com.github.Code-In-Chill.PunsKit"
 val rawVersion = project.findProperty("version")?.toString()?.trim()
 val jitpackVersion = (System.getenv("JITPACK_VERSION") ?: System.getenv("VERSION"))?.trim()
 
 val resolvedVersion = when {
     !rawVersion.isNullOrBlank() && rawVersion != "unspecified" -> rawVersion
     !jitpackVersion.isNullOrBlank() -> jitpackVersion
-    else -> "v1.3.1-SNAPSHOT"
+    else -> "v1.3.2-SNAPSHOT"
 }
 
 project.version = resolvedVersion
