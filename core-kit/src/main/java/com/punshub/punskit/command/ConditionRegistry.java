@@ -61,17 +61,18 @@ public class ConditionRegistry {
             try {
                 if (paramType == null) {
                     Object result = method.invoke(bean);
-                    return result instanceof Boolean b && b;
+                    return result instanceof Boolean && (Boolean) result;
                 }
 
                 if (Player.class.isAssignableFrom(paramType)) {
-                    if (!(sender instanceof Player player)) return false;
+                    if (!(sender instanceof Player)) return false;
+                    Player player = (Player) sender;
                     Object result = method.invoke(bean, player);
-                    return result instanceof Boolean b && b;
+                    return result instanceof Boolean && (Boolean) result;
                 }
 
                 Object result = method.invoke(bean, sender);
-                return result instanceof Boolean b && b;
+                return result instanceof Boolean && (Boolean) result;
             } catch (Exception e) {
                 logger.error("Error evaluating condition: " + key, e);
                 return false;
