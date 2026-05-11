@@ -5,9 +5,8 @@ import com.punshub.punskit.config.ConfigInjector;
 import com.punshub.punskit.exception.AmbiguousBeanException;
 import com.punshub.punskit.exception.BeanNotFoundException;
 import com.punshub.punskit.exception.CircularDependencyException;
+import com.punshub.punskit.exception.FrameworkException;
 import com.punshub.punskit.logging.PunsLogger;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Parameter;
@@ -16,7 +15,6 @@ import java.util.*;
 /**
  * Trung tâm lưu trữ và giải quyết phụ thuộc của IoC Container.
  */
-@RequiredArgsConstructor
 public class BeanRegistry {
 
     private final LinkedHashMap<Class<?>, Object> beans = new LinkedHashMap<>();
@@ -25,8 +23,15 @@ public class BeanRegistry {
     private Set<Class<?>> allCandidates = new HashSet<>();
 
     private final PunsLogger logger;
-    @Getter
     private ConfigInjector configInjector;
+
+    public BeanRegistry(PunsLogger logger) {
+        this.logger = logger;
+    }
+
+    public ConfigInjector getConfigInjector() {
+        return configInjector;
+    }
 
     public void setConfigInjector(ConfigInjector injector) {
         this.configInjector = injector;
@@ -61,10 +66,11 @@ public class BeanRegistry {
     }
 
     private boolean isSingleton(Class<?> type) {
-        if (!type.isAnnotationPresent(PScope.class)) {
+        PScope scope = type.getAnnotation(PScope.class);
+        if (scope == null) {
             return true;
         }
-        return type.getAnnotation(PScope.class).value() == PScopeType.SINGLETON;
+        return scope.value() == PScopeType.SINGLETON;
     }
 
     @SuppressWarnings("unchecked")
@@ -106,11 +112,10 @@ public class BeanRegistry {
             return instance;
 
         } catch (Exception e) {
-            if (e instanceof com.punshub.punskit.exception.FrameworkException) {
-                throw (com.punshub.punskit.exception.FrameworkException) e;
+            if (e instanceof FrameworkException) {
+                throw (FrameworkException) e;
             }
-            throw new com.punshub.punskit.exception.FrameworkException(
-                    "Failed to create bean: " + type.getSimpleName(), e);
+            throw new FrameworkException("Failed to create bean: " + type.getSimpleName(), e);
         } finally {
             currentlyResolving.remove(type);
         }
@@ -118,7 +123,8 @@ public class BeanRegistry {
 
     private Constructor<?> findConstructor(Class<?> type) {
         Constructor<?>[] constructors = type.getDeclaredConstructors();
-        for (Constructor<?> ctor : constructors) {
+        for (int i = 0; i < constructors.length; i++) {
+            Constructor<?> ctor = constructors[i];
             if (ctor.isAnnotationPresent(PAutowired.class)) {
                 ctor.setAccessible(true);
                 return ctor;
@@ -128,7 +134,7 @@ public class BeanRegistry {
             constructors[0].setAccessible(true);
             return constructors[0];
         }
-        throw new com.punshub.punskit.exception.FrameworkException(
+        throw new FrameworkException(
                 "Bean '" + type.getSimpleName() + "' has " + constructors.length +
                 " constructors but none is annotated with @PAutowired."
         );
@@ -157,7 +163,8 @@ public class BeanRegistry {
         }
 
         if (qualifierName != null) {
-            for (Class<?> impl : impls) {
+            for (int i = 0; i < impls.size(); i++) {
+                Class<?> impl = impls.get(i);
                 PQualifier q = impl.getAnnotation(PQualifier.class);
                 if (q != null && q.value().equals(qualifierName)) {
                     return resolve((Class<T>) impl);
@@ -171,7 +178,8 @@ public class BeanRegistry {
         }
 
         List<Class<?>> primaryImpls = new ArrayList<>();
-        for (Class<?> impl : impls) {
+        for (int i = 0; i < impls.size(); i++) {
+            Class<?> impl = impls.get(i);
             if (impl.isAnnotationPresent(PPrimary.class)) {
                 primaryImpls.add(impl);
             }
@@ -187,7 +195,9 @@ public class BeanRegistry {
         Set<Class<?>> result = new HashSet<>();
         Class<?> current = clazz;
         while (current != null && current != Object.class) {
-            for (Class<?> iface : current.getInterfaces()) {
+            Class<?>[] interfaces = current.getInterfaces();
+            for (int i = 0; i < interfaces.length; i++) {
+                Class<?> iface = interfaces[i];
                 result.add(iface);
                 result.addAll(collectInterfaces(iface));
             }

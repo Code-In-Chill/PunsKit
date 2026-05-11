@@ -88,21 +88,34 @@ dependencies {
     // Format: com.github.User:Repo:Module:Version
 
     // Recommended: Stable Release
-    implementation("com.github.Code-In-Chill.PunsKit:core-kit:v1.3.0")
+    implementation("com.github.Code-In-Chill:PunsKit:v1.3.4")
 
     // Optional: Nightly Build (Latest features from develop branch)
-    // implementation("com.github.Code-In-Chill.PunsKit:core-kit:develop-SNAPSHOT")
+    // implementation("com.github.Code-In-Chill:PunsKit:develop-SNAPSHOT")
 }
 ```
 
-tasks.shadowJar {
-    relocate("com.punshub.punskit", "your.package.shaded.punskit")
+### 3. Bootstrapping Your Plugin
+Instead of inheriting from `JavaPlugin`, you inherit from `PunskitPlugin`. You **MUST** implement `onPluginEnable()` and `onPluginDisable()`.
+
+```java
+package com.myplugin;
+
+import com.punshub.punskit.PunskitPlugin;
+
+public class MyPlugin extends PunskitPlugin {
+
+    @Override
+    public void onPluginEnable() {
+        getLogger().info("Plugin started with PunsKit!");
+    }
+
+    @Override
+    public void onPluginDisable() {
+        getLogger().info("Plugin stopping...");
+    }
 }
 ```
-
-For more details, see the **[🚀 Getting Started Guide](wiki/Getting-Started.md)**.
-
-## Giai đoạn Phát triển
 
 - [x] **G1** — DI Container cơ bản (Constructor Injection, Lifecycle)
 - [x] **G2** — Tích hợp Bukkit (Listener, Command, @PValue, @PScheduled)

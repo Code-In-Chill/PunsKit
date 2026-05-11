@@ -77,15 +77,15 @@ public abstract class PunskitPlugin extends JavaPlugin {
 
     /**
      * Called when the plugin is enabled and the IoC container is ready.
+     * Developers MUST override this method.
      */
-    public void onPluginEnable() {
-    }
+    public abstract void onPluginEnable();
 
     /**
      * Called when the plugin is disabling, before the IoC container is shut down.
+     * Developers MUST override this method.
      */
-    public void onPluginDisable() {
-    }
+    public abstract void onPluginDisable();
 
     /**
      * Gets a bean from the IoC container.
