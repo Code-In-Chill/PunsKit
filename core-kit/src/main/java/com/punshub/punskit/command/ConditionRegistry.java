@@ -3,7 +3,6 @@ package com.punshub.punskit.command;
 import com.punshub.punskit.annotation.command.PConditionProvider;
 import com.punshub.punskit.exception.FrameworkException;
 import com.punshub.punskit.logging.PunsLogger;
-import lombok.RequiredArgsConstructor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
@@ -17,16 +16,21 @@ import java.util.function.Predicate;
 /**
  * Quản lý các điều kiện tùy chỉnh cho lệnh.
  */
-@RequiredArgsConstructor
 public class ConditionRegistry {
 
     private final PunsLogger logger;
     private final Map<String, Predicate<CommandSender>> conditions = new HashMap<>();
 
+    public ConditionRegistry(PunsLogger logger) {
+        this.logger = logger;
+    }
+
     public void registerProviders(Collection<Object> beans) {
         int count = 0;
         for (Object bean : beans) {
-            for (Method method : bean.getClass().getDeclaredMethods()) {
+            Method[] methods = bean.getClass().getDeclaredMethods();
+            for (int i = 0; i < methods.length; i++) {
+                Method method = methods[i];
                 PConditionProvider anno = method.getAnnotation(PConditionProvider.class);
                 if (anno != null) {
                     registerProvider(bean, method, anno.value());
@@ -39,7 +43,7 @@ public class ConditionRegistry {
         }
     }
 
-    private void registerProvider(Object bean, Method method, String key) {
+    private void registerProvider(final Object bean, final Method method, final String key) {
         if (method.getReturnType() != boolean.class && method.getReturnType() != Boolean.class) {
             throw new FrameworkException("Condition provider method '" + method.getName() + "' in " + 
                     bean.getClass().getSimpleName() + " must return boolean.");
@@ -51,31 +55,36 @@ public class ConditionRegistry {
                     bean.getClass().getSimpleName() + " must have 0 or 1 parameter.");
         }
 
-        Class<?> paramType = params.length == 1 ? params[0].getType() : null;
+        final Class<?> paramType = params.length == 1 ? params[0].getType() : null;
         if (paramType != null && !CommandSender.class.isAssignableFrom(paramType) && !Player.class.isAssignableFrom(paramType)) {
             throw new FrameworkException("Condition provider parameter in '" + method.getName() + "' must be CommandSender or Player.");
         }
 
         method.setAccessible(true);
-        conditions.put(key, (sender) -> {
-            try {
-                if (paramType == null) {
-                    Object result = method.invoke(bean);
-                    return result instanceof Boolean && (Boolean) result;
-                }
+        conditions.put(key, new Predicate<CommandSender>() {
+            @Override
+            public boolean test(CommandSender sender) {
+                try {
+                    if (paramType == null) {
+                        Object result = method.invoke(bean);
+                        return result instanceof Boolean && (Boolean) result;
+                    }
 
-                if (Player.class.isAssignableFrom(paramType)) {
-                    if (!(sender instanceof Player)) return false;
-                    Player player = (Player) sender;
-                    Object result = method.invoke(bean, player);
-                    return result instanceof Boolean && (Boolean) result;
-                }
+                    if (Player.class.isAssignableFrom(paramType)) {
+                        if (!(sender instanceof Player)) {
+                            return false;
+                        }
+                        Player player = (Player) sender;
+                        Object result = method.invoke(bean, player);
+                        return result instanceof Boolean && (Boolean) result;
+                    }
 
-                Object result = method.invoke(bean, sender);
-                return result instanceof Boolean && (Boolean) result;
-            } catch (Exception e) {
-                logger.error("Error evaluating condition: " + key, e);
-                return false;
+                    Object result = method.invoke(bean, sender);
+                    return result instanceof Boolean && (Boolean) result;
+                } catch (Exception e) {
+                    logger.error("Error evaluating condition: " + key, e);
+                    return false;
+                }
             }
         });
         logger.debug("Registered condition provider: {}", key);
