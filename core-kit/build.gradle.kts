@@ -10,8 +10,8 @@ val jitpackVersion = (System.getenv("JITPACK_VERSION") ?: System.getenv("VERSION
 val resolvedVersion = when {
     !rawVersion.isNullOrBlank() && rawVersion != "unspecified" -> rawVersion
     !jitpackVersion.isNullOrBlank() -> jitpackVersion
-    else -> "develop-SNAPSHOT"
-}.replace("v", "")
+    else -> "v1.3.2-SNAPSHOT"
+}
 
 project.version = resolvedVersion
 
